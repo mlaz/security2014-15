@@ -1,59 +1,110 @@
+from pprint import pprint
+#from twisted.application.internet import TCPServer
+#from twisted.application.service import Application
+from twisted.web.resource import Resource
+from twisted.web.server import Site
 from twisted.internet import reactor
-from twisted.web import server, resource
-from twisted.web.static import File
+from twisted.enterprise import adbapi
+#from twisted.web.server import NOT_DONE_YET
 
-user1={"name":"john", "surname":"smith", "age":23, "email":"john@foo.bar"}
-user2={"name":"davide", "surname":"carboni", "age":35, "email":"davide@foo.bar"}
-user3={"name":"stefano", "surname":"sanna", "age":32, "email":"stefano@foo.bar"}
+from datetime import datetime
+import simplejson
 
-users=[user1,user2,user3]
+# dbfilename = "test.sqlite"
+# dbpool = adbapi.ConnectionPool("sqlite3", dbfilename, check_same_thread=False)
 
-class Root(resource.Resource):
-    isLeaf=False
+class Session(Resource):
+    isLeaf = True
+
+    def render_POST(self, request):
+        pprint(request.__dict__)
+        #START SESSION
+        #END SESSION
+        newdata = request.content.getvalue()
+        print newdata
+        return "hello form"
+
+class PBoxes(Resource):
+    isLeaf = True
 
     def render_GET(self, request):
-        return "Arkanoid?"
+        #GET THE LIST OF ALL PBOXES
+        #GET METADATA FROM A SINGLE PBOX
+        return ''
 
+    def render_POST(self, request):
+        pprint(request.__dict__)
+        #REGISTER PBOX
+        newdata = request.content.getvalue()
+        print newdata
+        return "hello form"
 
+class Files(Resource):
+    isLeaf = True
 
-
-
-class ListUsers(resource.Resource):
-    isLeaf=True
-
-def render_GET(self, request):
-    userList=[us['name'] for us in users]
-    return str(userList)
-
-
-
-
-class User(resource.Resource):
-    isLeaf=True
     def render_GET(self, request):
-        name=request.args['name'][0]
-        record=filter(lambda(x): name==x['name'], users)[0]
-        return str(record)
+        #LIST ALL FILES ON USER'S PBOX
+        #DOWNLOAD A FILE
+        return ''
+
+    def render_POST(self, request):
+        pprint(request.__dict__)
+        #UPLOAD A FILE
+        newdata = request.content.getvalue()
+        print newdata
+        return "hello user"
+
+    def render_PUT(self, request):
+        pprint(request.__dict__)
+        #UPDATE A FILE (AKA CHANGE THE FILE)
+        newdata = request.content.getvalue()
+        print newdata
+        return "hello user"
+
+    def render_DELETE(self, request):
+        pprint(request.__dict__)
+        #DELETE A FILE
+        newdata = request.content.getvalue()
+        print newdata
+        return "hello user"
 
 
+class Shares(Resource):
+    isLeaf = True
 
-def render_POST(self,request):
-    record=eval(request.content.read())
-    #WARNING. USING EVAL ON USER TRANSMITTED DATA
-    #IS A SEVERE SECURITY FLAW.
-    #USE A PARSER LIKE SIMPLEJSON INSTEAD
+    def render_GET(self, request):
+        pprint(request.__dict__)
+        #GET A SHARE (AKA DOWNLOAD THE SHARED FILE)
+        return "hello user"
 
-    users.append(record)g(x): name==x['name'], users)[0]
-    users.remove(record)
-    return "OK"
+    def render_POST(self, request):
+        pprint(request.__dict__)
+        #SHARE A FILE (AKA CREATE A NEW SHARE)
+        newdata = request.content.getvalue()
+        print newdata
+        return "hello user"
+
+    def render_PUT(self, request):
+        pprint(request.__dict__)
+        #UPDATE A SHARE (I.E. CHANGE DE WRITE PERMISSIONS)
+        #UPDATE A SHARED FILE (AKA CHANGE THE FILE)
+        newdata = request.content.getvalue()
+        print newdata
+        return "hello user"
+
+    def render_DELETE(self, request):
+        pprint(request.__dict__)
+        #DELETE A SHARE (AKA UNSHARE)
+        newdata = request.content.getvalue()
+        print newdata
+        return "hello user"
 
 
 if __name__ == "__main__":
-    root=Root()
-    root.putChild("user",User())
-    root.putChild("listUsers",ListUsers())
-    root.putChild("d",File("."))
-    site = server.Site(root)
-    reactor.listenTCP(8000, site)
+    root = Resource()
+    root.putChild("session", Session())
+    root.putChild("pboxes", PBoxes())
+    root.putChild("files", Files())
+    root.putChild("shares", Shares())
+    reactor.listenTCP(8000, Site(root))
     reactor.run()
-
