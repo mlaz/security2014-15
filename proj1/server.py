@@ -1,17 +1,16 @@
 from pprint import pprint
-#from twisted.application.internet import TCPServer
-#from twisted.application.service import Application
+
 from twisted.web.resource import Resource
 from twisted.web.server import Site
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.enterprise import adbapi
-#from twisted.web.server import NOT_DONE_YET
+from twisted.web.server import NOT_DONE_YET
 
 from datetime import datetime
 import json
 
-# dbfilename = "test.sqlite"
-# dbpool = adbapi.ConnectionPool("sqlite3", dbfilename, check_same_thread=False)
+dbfilename = "safebox.sqlite"
+dbpool = adbapi.ConnectionPool("sqlite3", dbfilename, check_same_thread=False)
 
 # class Session(Resource):
 #     isLeaf = True
@@ -37,15 +36,38 @@ class PBoxes(Resource):
     # 'method' = "get_mdata"
     # 'fileid' = <the file id>
     def render_GET(self, request):
+
+        def listPBoxes():
+            return dbpool.runQuery("SELECT PBoxId, UserCCId, UserName FROM PBox")
+
+        def listPBoxes_cb(data):
+            print type(data)
+            print type(data[0])
+            pprint(data)
+            data_dict = []
+
+            for row in data:
+                row_dict = {
+                    'PBoxId' : row[0],
+                    'UserCCId' : row[1],
+                    'UserName' : row[2] }
+                data_dict.append(row_dict)
+
+            request.write(json.dumps(data_dict, encoding="utf-8"));
+            request.finish()
+
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
+
 
         # list:
         if request.args['method'] == ['list']:
             print request.args['method']
+            d = listPBoxes();
+            d.addCallback(listPBoxes_cb)
+
         # get_mdata:
         elif request.args['method'] == ['get_mdata']:
             print request.args['method']
@@ -58,7 +80,7 @@ class PBoxes(Resource):
             pprint(request.__dict__)
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        return ''
+        return NOT_DONE_YET
 
 
     # PUT Methods:
@@ -70,9 +92,9 @@ class PBoxes(Resource):
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
+
 
         pprint(request.__dict__)
 
@@ -106,9 +128,9 @@ class Files(Resource):
     def render_GET(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
+
 
         # list:
         if request.args['method'] == ['list']:
@@ -135,9 +157,8 @@ class Files(Resource):
     def render_POST(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
 
@@ -164,9 +185,8 @@ class Files(Resource):
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
 
@@ -193,9 +213,8 @@ class Files(Resource):
     def render_DELETE(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
 
@@ -226,9 +245,9 @@ class Shares(Resource):
     def render_GET(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
+
         pprint(request.__dict__)
 
         # getshared:
@@ -252,9 +271,8 @@ class Shares(Resource):
     def render_POST(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
 
@@ -287,9 +305,8 @@ class Shares(Resource):
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            return json.dumps(
-                {"error": "Invalid Request", "reason": "Argument 'method' not specified."},
-                sort_keys=True, encoding="utf-8")
+            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
 
@@ -345,5 +362,6 @@ if __name__ == "__main__":
     root.putChild("pboxes", PBoxes())
     root.putChild("files", Files())
     root.putChild("shares", Shares())
-    reactor.listenTCP(8000, Site(root))
+    factory = Site(root)
+    reactor.listenTCP(8000, factory)
     reactor.run()

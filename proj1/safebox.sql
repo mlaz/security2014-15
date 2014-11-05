@@ -1,11 +1,11 @@
 /*******************************************************************************
    Drop Tables
 ********************************************************************************/
-DROP TABLE IF EXISTS [Album];
+DROP TABLE IF EXISTS [PBox];
 
-DROP TABLE IF EXISTS [Artist];
+DROP TABLE IF EXISTS [File];
 
-DROP TABLE IF EXISTS [Customer];
+DROP TABLE IF EXISTS [Share];
 
 
 /*******************************************************************************
@@ -16,8 +16,7 @@ CREATE TABLE [PBox]
     [PBoxId] INTEGER PRIMARY KEY,
     [UserCCId] NVARCHAR(160)  NOT NULL,
     [PubKey] BLOB  NOT NULL,
-    [UserName] NVARCHAR(160)  NOT NULL,
-    CONSTRAINT [PK_PBox] PRIMARY KEY  ([PBoxId])
+    [UserName] NVARCHAR(160)  NOT NULL
 );
 
 CREATE TABLE [File]
@@ -26,7 +25,6 @@ CREATE TABLE [File]
     [OwnerPBoxId] INTEGER  NOT NULL,
     [SymKey] BLOB  NOT NULL,
     [FileName] NVARCHAR(120),
-    CONSTRAINT [PK_File] PRIMARY KEY  ([FileId]),
     FOREIGN KEY ([OwnerPBoxId]) REFERENCES [PBox] ([PBoxId])
                 ON DELETE NO ACTION ON UPDATE NO ACTION
 );
@@ -37,7 +35,7 @@ CREATE TABLE [Share]
     [ForeignPBoxId] INTEGER  NOT NULL,
     [SymKey] BLOB  NOT NULL,
     [Writeable] INTEGER  DEFAULT 0,
-    CONSTRAINT [PK_Share] PRIMARY KEY  ([FileId], [PBoxId]),
+    CONSTRAINT [PK_Share] PRIMARY KEY  ([FileId], [ForeignPBoxId]),
     FOREIGN KEY ([FileId]) REFERENCES [File] ([FileId])
 		ON DELETE NO ACTION ON UPDATE NO ACTION,
     FOREIGN KEY ([ForeignPBoxId]) REFERENCES [PBox] ([PBoxId])
