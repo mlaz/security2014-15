@@ -30,7 +30,7 @@ def listPBoxes_cb(data, request):
         data_dict.update({tsize: row_dict})
         tsize = tsize + 1
 
-    reply_dict = { 'size': tsize, 'list': data_dict }
+    reply_dict = { 'status': "OK", 'size': tsize, 'list': data_dict }
     request.write(json.dumps(reply_dict, encoding="utf-8"));
     request.finish()
 
@@ -54,6 +54,7 @@ def getPBoxMData_cb (data, request):
             'PubKey': row[3],}
         reply_dict.update(row_dict)
 
+    reply_dict = {'status': "OK", 'data': reply_dict}
     request.write(json.dumps(reply_dict, encoding="utf-8"));
     request.finish()
 
@@ -72,11 +73,32 @@ def registerPBox(args):
 
 # registerPBox_cb(): Callback for registerPBox() produces reply according to registerPBox return value.
 def registerPBox_cb (data, request):
-    reply_dict = {}
-    print type(data)
-    print data
+    reply_dict = {'status': "OK"} #TODO make this change according to data
 
+    request.write(json.dumps(reply_dict, encoding="utf-8"));
+    request.finish()
 
+# listFiles(): Queries the data base for all entries on all PBox's attributes for given ccid.
+def listFiles(args):
+    pboxid = str(args['pboxid'])
+    pboxid = strip_text(pboxid)
+
+    return dbpool.runQuery(
+        "SELECT FileName, FileId FROM File WHERE OwnerPBoxId = ?", (pboxid,));
+
+# listFiles_cb(): Callback for listFiles() produces reply according to listFiles return value.
+def listFiles_cb (data, request):
+    data_dict = {}
+
+    tsize = 0
+    for row in data:
+        row_dict = {
+            'FileName': row[0],
+            'FileId': row[1]}
+        data_dict.update({tsize: row_dict})
+        tsize = tsize + 1
+
+    reply_dict = { 'status': "OK", 'size': tsize, 'list': data_dict }
     request.write(json.dumps(reply_dict, encoding="utf-8"));
     request.finish()
 

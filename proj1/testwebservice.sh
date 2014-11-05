@@ -8,6 +8,8 @@ printf "\n\nResource: pboxes, Mehtod: register\n"
 curl -X PUT 'http://localhost:8000/pboxes/?method=register&ccid=234567890&name=Joao&pubkey=aaa'
 printf "\n"
 curl -X GET 'http://localhost:8000/pboxes/?method=list'
+printf "\n\nResource: pboxes, Mehtod: register\n"
+curl -X GET 'http://localhost:8000/files/?method=list&pboxid=1'
 printf "\n"
 ./populate_db.sh
 printf "\n"

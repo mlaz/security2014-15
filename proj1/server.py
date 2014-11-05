@@ -26,7 +26,10 @@ from  sfbx_srv_utils import *
 #         print newdata
 #         return "hello form"
 
-# The PBoxes resource
+# The PBoxes Resource:
+#
+# Handles requests related to PBoxes' ownership, browsing and discovery.
+#
 class PBoxes(Resource):
     isLeaf = True
 
@@ -42,7 +45,8 @@ class PBoxes(Resource):
 
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
 
@@ -56,7 +60,8 @@ class PBoxes(Resource):
         elif request.args['method'] == ['get_mdata']:
 
             if 'ccid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'ccid' not provided."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'ccid' not provided."} }
 
             else:
                 print request.args['ccid']
@@ -65,7 +70,7 @@ class PBoxes(Resource):
 
         # Unknown method:
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request", 'reason': "Unknown method for this resource."} }
 
         if error != None:
             print request.args['method']
@@ -85,7 +90,8 @@ class PBoxes(Resource):
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         # register:
@@ -93,20 +99,24 @@ class PBoxes(Resource):
             print request.args['method']
 
             if 'ccid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'ccid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'ccid' not specified."} }
 
             if ('name' not in request.args.keys()) & (error == None):
-                error = {"error": "Invalid Request", "reason": "Argument 'name' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'name' not specified."} }
 
             if ('pubkey' not in request.args.keys()) & (error == None):
-                error = {"error": "Invalid Request", "reason": "Argument 'pubkey' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'pubkey' not specified."} }
 
             elif (error == None):
                 df = registerPBox(request.args);
                 df.addCallback(registerPBox_cb, request)
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)
@@ -115,41 +125,57 @@ class PBoxes(Resource):
         return NOT_DONE_YET
 
 # The Files resource
+#
+# Handles requests related to SafeBox's File ownership, browsing and discovery.
+#
 class Files(Resource):
     isLeaf = True
 
     # GET Methods:
     #
     # list: To list all files on user's pbox.
-    # 'method' = "getshared"
-    # 'fileid' = <the file id>
+    # 'method' = "list"
+    # 'pboxid' = <the pbox id>
     #
     # getfile: To download a file from user's pbox.
     # 'method' = "getfile"
     # 'fileid' = <the file id>
+    # 'pboxid' = <the pbox id>
     def render_GET(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
 
         # list:
         if request.args['method'] == ['list']:
-            if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+            if 'pboxid' not in request.args.keys():
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'pboxid' not specified."} }
+
+            elif (error == None):
+                df = listFiles(request.args);
+                df.addCallback(listFiles_cb, request)
 
             print request.args['method']
 
         # getfile:
         elif request.args['method'] == ['getfile']:
             if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'fileid' not specified."} }
+
+            if ('pboxid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'pboxid' not specified."} }
 
             print request.args['method']
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)
@@ -166,7 +192,8 @@ class Files(Resource):
     def render_POST(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
@@ -174,12 +201,14 @@ class Files(Resource):
         # updatefile:
         if request.args['method'] == ['updatefile']:
             if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'fileid' not specified."} }
 
             print request.args['method']
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)
@@ -198,18 +227,21 @@ class Files(Resource):
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         # putfile:
         if request.args['method'] == ['putfile']:
             if ('name' not in request.args.keys()):
-                error = {"error": "Invalid Request", "reason": "Argument 'name' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'name' not specified."} }
 
             print request.args['method']
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)
@@ -227,20 +259,23 @@ class Files(Resource):
     def render_DELETE(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
 
         # delete:
         if request.args['method'] == ['delete']:
             if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'fileid' not specified."} }
 
             print request.args['method']
 
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)
@@ -249,6 +284,9 @@ class Files(Resource):
         return NOT_DONE_YET
 
 # The Shares resource
+#
+# Handles requests related to SafeBox's File sharing features.
+#
 class Shares(Resource):
     isLeaf = True
 
@@ -260,7 +298,8 @@ class Shares(Resource):
     def render_GET(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
@@ -268,12 +307,14 @@ class Shares(Resource):
         # getshared:
         if request.args['method'] == ['getshared']:
             if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'fileid' not specified."} }
 
             print request.args['method']
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)
@@ -290,7 +331,8 @@ class Shares(Resource):
     def render_POST(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
@@ -298,15 +340,18 @@ class Shares(Resource):
         # sharefile:
         if request.args['method'] == ['sharefile']:
             if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'fileid' not specified."} }
 
             if ('ruserid' not in request.args.keys()) & (error == None):
-                error = {"error": "Invalid Request", "reason": "Argument 'ruserid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'ruserid' not specified."} }
 
             print request.args['method']
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)
@@ -331,7 +376,8 @@ class Shares(Resource):
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
@@ -339,28 +385,33 @@ class Shares(Resource):
         # updateshare:
         if request.args['method'] == ['updateshare']:
             if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'fileid' not specified."} }
 
             if ('ruserid' not in request.args.keys()) & (error == None):
-                error = {"error": "Invalid Request", "reason": "Argument 'ruserid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'ruserid' not specified."} }
 
             if ('attrname' not in request.args.keys()) & (error == None):
-                error = {"error": "Invalid Request", "reason": "Argument 'attrname' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'attrname' not specified."} }
 
             if ('newval' not in request.args.keys()) & (error == None):
-                error = {"error": "Invalid Request", "reason": "Argument 'newval' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'newval' not specified."} }
 
             print request.args['method']
 
         # updatesfile:
         elif request.args['method'] == ['updatesfile']:
             if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'fileid' not specified."} }
 
             print request.args['method']
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request", 'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)
@@ -379,7 +430,8 @@ class Shares(Resource):
         error = None;
 
         if 'method' not in request.args.keys():
-            error = {"error": "Invalid Request", "reason": "Argument 'method' not specified."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         pprint(request.__dict__)
@@ -387,12 +439,14 @@ class Shares(Resource):
         # delete:
         if request.args['method'] == ['delete']:
             if 'fileid' not in request.args.keys():
-                error = {"error": "Invalid Request", "reason": "Argument 'fileid' not specified."}
+                error = { 'status': {'error': "Invalid Request",
+                         'reason': "Argument 'fileid' not specified."} }
 
             print request.args['method']
 
         else:
-            error = {"error": "Invalid Request", "reason": "Unknown method for this resource."}
+            error = { 'status': {'error': "Invalid Request",
+                     'reason': "Unknown method for this resource."} }
 
         if error != None:
             pprint(request.__dict__)

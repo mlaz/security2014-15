@@ -23,8 +23,8 @@ CREATE TABLE [File]
 (
     [FileId] INTEGER PRIMARY KEY,
     [OwnerPBoxId] INTEGER  NOT NULL,
-    [SymKey] BLOB  NOT NULL,
     [FileName] NVARCHAR(120),
+    [SymKey] BLOB  NOT NULL,
     FOREIGN KEY ([OwnerPBoxId]) REFERENCES [PBox] ([PBoxId])
                 ON DELETE NO ACTION ON UPDATE NO ACTION
 );
