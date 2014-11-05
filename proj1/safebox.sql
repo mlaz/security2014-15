@@ -15,7 +15,7 @@ CREATE TABLE [PBox]
 (
     [PBoxId] INTEGER PRIMARY KEY,
     [UserCCId] NVARCHAR(160)  NOT NULL,
-    [PubKey] BLOB  NOT NULL,
+    [PubKey] NVARCHAR(160)  NOT NULL,
     [UserName] NVARCHAR(160)  NOT NULL
 );
 
