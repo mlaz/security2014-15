@@ -165,11 +165,14 @@ class Files(Resource):
         elif request.args['method'] == ['getfile']:
             if 'fileid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'fileid' not specified."} }
+                         'message': "Argument 'fileid' not specifeid."} }
 
-            if ('pboxid' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'pboxid' not specified."} }
+            # if ('pboxid' not in request.args.keys()) & (error == None):
+            #     error = { 'status': {'error': "Invalid Request",
+            #              'message': "Argument 'pboxid' not specified."} }
+            elif (error == None):
+                df = getFileInfo(request.args);
+                df.addCallback(retGetFile_cb, request)
 
             print request.args['method']
 

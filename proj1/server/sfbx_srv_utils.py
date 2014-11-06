@@ -122,32 +122,36 @@ def getFileInfo(args):
 def retGetFile_cb (data, request):
 
     #TODO: Implement infrastructure for ownership checking (add field)
-    if len(data) == 0:
-        reply_dict = { 'status': {'error': "Unsuccessful db transaction", 'message': data} }
+    # if len(data) == 0:
+    #     reply_dict = { 'status': {'error': "Unsuccessful db transaction", 'message': data} }
 
-    else:
-        row = data[0]
-        file_name = row[0]
-        sym_key = row[2]
-        iv = row[2]
+    # else:
+    #     row = data[0]
+    #     file_name = row[0]
+    #     sym_key = row[2]
+    #     iv = row[2]
 
     #TODO: Here we shoud read the file
-    # count = 0;
-    # do:
-    #     bytes_read = 0
-    ##    read chunk_size bytes from file
-    #     reply_dict = { 'status': "OK", 'chunk': bytes, 'count': count }
-    #     request.write(json.dumps(reply_dict, encoding="utf-8"));
-    #     count = count + 1
-    # while ( (bytes_read !=0) && ((bytes_read % chunk_size) == 0) )
-    # if bytes_read != 0
-    #reply_dict = { 'status': {'error': "File size inconsistent"},
-    #             'finish reason': 'EOF', 'nchunks': count }
-    ##filesize must be multiple of chunksize else reply with error
-    # reply_dict = { 'status': "OK", 'finish reason': 'EOF', 'nchunks': count }
-    # request.write(json.dumps(reply_dict, encoding="utf-8"));
-    # request.finish()
 
+    file = open("exfile.txt","r")
+    chunk_size = 200
+    count = 0;
+    bytes_read = chunk_size
+    while ( (bytes_read !=0) & ((bytes_read % chunk_size) == 0) ):
+        bytes = file.read(chunk_size)
+        bytes_read = len(bytes)
+        if (bytes_read > 0):
+            reply_dict = { 'status': "OK", 'chunk': bytes, 'chunk number':count }
+            request.write(json.dumps(reply_dict, encoding="utf-8"));
+            count = count + 1
+
+
+
+    if bytes_read != 0:
+        reply_dict = { 'status': {'error': "File size inconsistent"},
+                'finish reason': 'EOF', 'nchunks': count }
+
+    reply_dict = { 'status': "OK", 'finish reason': 'EOF', 'nchunks': count }
     request.write(json.dumps(reply_dict, encoding="utf-8"));
     request.finish()
 
