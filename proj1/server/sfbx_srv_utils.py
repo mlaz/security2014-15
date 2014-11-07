@@ -2,7 +2,10 @@ from twisted.enterprise import adbapi
 from twisted.protocols.basic import FileSender
 from twisted.python.log import err
 from twisted.web.server import NOT_DONE_YET
+from twisted.internet import abstract, defer, reactor
+from twisted.web import iweb
 
+from zope import interface
 from pprint import pprint
 
 import json
@@ -146,10 +149,77 @@ def retGetFile_cb (data, request):
 #
 
 
-
+# Misc:
+#
 # strip_text(): helper function for stripping text from "[","]" and "'"
 def strip_text(txt):
     txt = txt.strip("[")
     txt = txt.strip("]")
     txt = txt.strip("'")
     return txt
+
+#TODO: add error handling on file io operations
+# class FD2FileProducer:
+class FD2FileProducer(object):
+    interface.implements(iweb.IBodyProducer)
+
+    def __init__(self, request, chunksize=200):
+        self._file = request.content
+        self._request = request
+        self._consumer = self._deferred = self._delayedProduce = None
+        self._paused = False
+        self.chunksize = chunksize
+        self.length = iweb.UNKNOWN_LENGTH
+
+    def startProducing(self, consumer):
+        print "START"
+        self._consumer = consumer
+        self._deferred = defer.Deferred()
+        reactor.callLater(0, self._produceSome)
+        return self._deferred
+
+    def _scheduleSomeProducing(self):
+        self._delayedProduce = reactor.callLater(0, self._produceSome)
+
+    # def write(self, data):
+    #     self._request.write(data)
+
+    def _produceSome(self):
+        if self._paused:
+            return
+
+        data = None
+        if not self._file.closed:
+            data = self._file.read(self.chunksize)
+
+            if data:
+                self._consumer.write(data)
+                self._scheduleSomeProducing()
+
+        if not data :
+            print "FINISHED0"
+            if self._deferred is not None:
+                print "FINISHED0"
+                self._deferred.callback(None)
+                self._deferred = None
+                self._consumer.unregisterProducer()
+
+    def pauseProducing(self):
+        print "PAUSE"
+        self._paused = True
+        if self._delayedProduce is not None:
+            self._delayedProduce.cancel()
+
+    def resumeProducing(self):
+        print "RESUME"
+        self._paused = False
+        if self._deferred is not None:
+            self._scheduleSomeProducing()
+
+    def stopProducing(self):
+        print "STOP"
+        self.consumer.unregisterProducer()
+        if self._delayedProduce is not None:
+            self._delayedProduce.cancel()
+        self._deferred = None
+

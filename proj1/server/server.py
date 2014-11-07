@@ -1,13 +1,15 @@
-from pprint import pprint
-
 from twisted.web.resource import Resource
 from twisted.web.server import Site
 from twisted.internet import reactor, defer
 from twisted.enterprise import adbapi
 from twisted.web.server import NOT_DONE_YET
+from twisted.protocols.ftp import FileConsumer
 
 from datetime import datetime
+from pprint import pprint
+
 import json
+#import os
 
 from  sfbx_srv_utils import *
 
@@ -229,38 +231,50 @@ class Files(Resource):
     # 'pboxid' = "<user's pbox id>"
     # 'name' = <file name>
     def render_PUT(self, request):
+        print request.args['method']
 
-        error = None;
-        if 'method' not in request.args.keys():
-            error = { 'status': {'error': "Invalid Request",
-                     'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+        # print type(request)
+        # a = request.content.read(1372)
+        # print a
 
-        # putfile:
-        if request.args['method'] == ['putfile']:
-            if ('name' not in request.args.keys()):
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'name' not specified."} }
-            print request.args['method']
+        def requestFinish_cb(ignore):
+            file.close()
+            request.finish()
 
-        else:
-            error = { 'status': {'error': "Invalid Request",
-                     'message': "Unknown method for this resource."} }
+        producer = FD2FileProducer(request)
+        file = open("RECEIVED.txt", "w")
+        cons = FileConsumer(file)
+        cons.registerProducer(producer, True)
+        d = producer.startProducing(cons)
+        d.addCallback(requestFinish_cb)
 
-        if error != None:
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-#        file = open("RECEIVED.txt", "w")
+        # error = None;
+        # if 'method' not in request.args.keys():
+        #     error = { 'status': {'error': "Invalid Request",
+        #              'message': "Argument 'method' not specified."} }
+        #     return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-#       cons = FileConsumer(file)
-        print type(request)
-        a = request.content.read(1372)
-        request.content.write("hellooooo000oo")
-        print a
-#        newdata = request.content.getvalue()
+        # # putfile:
+        # if request.args['method'] == ['putfile']:
+        #     if ('name' not in request.args.keys()):
+        #         error = { 'status': {'error': "Invalid Request",
+        #                  'message': "Argument 'name' not specified."} }
+        #     print request.args['method']
+
+        # else:
+        #     error = { 'status': {'error': "Invalid Request",
+        #              'message': "Unknown method for this resource."} }
+
+        # if error != None:
+        #     pprint(request.__dict__)
+        #     return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+
+
+#       newdata = request.content.getvalue()
 #       print newdata
-        request.finish()
+#       request.finish()
         return NOT_DONE_YET
 
     # DELETE Methods:
