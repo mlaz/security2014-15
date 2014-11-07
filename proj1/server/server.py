@@ -229,6 +229,7 @@ class Files(Resource):
     # 'pboxid' = "<user's pbox id>"
     # 'name' = <file name>
     def render_PUT(self, request):
+
         error = None;
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
@@ -250,8 +251,16 @@ class Files(Resource):
             pprint(request.__dict__)
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        newdata = request.content.getvalue()
-        print newdata
+#        file = open("RECEIVED.txt", "w")
+
+#       cons = FileConsumer(file)
+        print type(request)
+        a = request.content.read(1372)
+        request.content.write("hellooooo000oo")
+        print a
+#        newdata = request.content.getvalue()
+#       print newdata
+        request.finish()
         return NOT_DONE_YET
 
     # DELETE Methods:

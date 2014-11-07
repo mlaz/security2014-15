@@ -13,11 +13,12 @@ class _FileProducer(object):  # pragma: no cover
     """
     interface.implements(iweb.IBodyProducer)
 
-    def __init__(self, file):
+    def __init__(self, file, chunksize=200):
         self._file = file
         self._consumer = self._deferred = self._delayedProduce = None
         self._paused = False
-        self.length = os.path.getsize(file.name)
+        self.chunksize = chunksize
+        self.length = iweb.UNKNOWN_LENGTH
 
     def startProducing(self, consumer):
         """
@@ -46,7 +47,7 @@ class _FileProducer(object):  # pragma: no cover
         if self._paused:
             return
 
-        data = self._file.read(200)
+        data = self._file.read(self.chunksize)
         if data:
             self._consumer.write(data)
             self._scheduleSomeProducing()
@@ -84,25 +85,18 @@ class _FileProducer(object):  # pragma: no cover
             self._delayedProduce.cancel()
         self._deferred = None
 
+if __name__ == "__main__":
 
-def cb(ignored):
-    print "FINISHED"
-    reactor.stop()
+    def cb(ignored):
+        print "FINISHED"
+        file.close()
+        reactor.stop()
 
-def send():
-    f = open('recfile.exe', 'rb')
-    producer = _FileProducer(f)
-
+    file = open('recfile.exe', 'rb')
+    producer = _FileProducer(file)
     headers = http_headers.Headers()
-    contentType = "multipart/form-data;"
-    headers.setRawHeaders("Content-Type", ["Transfer-Encoding: chunked"])
 
     agent = client.Agent(reactor)
-    d = agent.request("PUT", "http://localhost:8000/files/?method=putfile&name=sfsd", headers, producer)
-    d.addCallback(cb)
-    return d
-
-if __name__ == "__main__":
-    d = send()
-
+    df = agent.request("PUT", "http://localhost:8000/files/?method=putfile&name=sfsd", headers, producer)
+    df.addCallback(cb)
     reactor.run()

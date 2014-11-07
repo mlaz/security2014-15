@@ -2,6 +2,8 @@ from twisted.internet import reactor
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
 
+from twisted.protocols.basic import FileSender
+
 from twisted.web.client import FileBodyProducer
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
@@ -23,6 +25,13 @@ class BeginningPrinter(Protocol):
         print 'Finished receiving body:', reason.getErrorMessage()
         self.finished.callback(None)
 
+# class fileSendWrap(FileSender):
+#     def __init__(self,file):
+#         self.file = file
+
+#     def startProducing(cons):
+#         beginFileTransfer(self, file, cons)
+
 class SaveContents(Protocol):
     def __init__(self, finished, filesize, filename):
         self.finished = finished
@@ -43,7 +52,7 @@ class SaveContents(Protocol):
         self.finished.callback(None)
 
 agent = Agent(reactor)
-f = open('test.txt', 'rb')
+f = open('recfile.exe', 'rb')
 body = FileBodyProducer(f)
 d = agent.request(
     'PUT',
@@ -65,6 +74,7 @@ def cbRequest(response):
 d.addCallback(cbRequest)
 
 def cbShutdown(ignored):
+    file.close()
     reactor.stop()
 d.addBoth(cbShutdown)
 
