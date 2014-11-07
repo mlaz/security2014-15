@@ -6,6 +6,7 @@ from twisted.internet.protocol import Protocol
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
 
+from twisted.protocols.ftp import FileConsumer
 from sfbx_client_protocols import FileDownload
 
 def cbRequest(response, file):
@@ -15,7 +16,8 @@ def cbRequest(response, file):
     print 'Response headers:'
     print pformat(list(response.headers.getAllRawHeaders()))
     finished = Deferred()
-    response.deliverBody(FileDownload(finished))
+    cons = FileConsumer(file)
+    response.deliverBody(FileDownload(finished, cons))
     return finished
 
 def cbShutdown(ignored, file):
@@ -28,7 +30,7 @@ def main():
     agent = Agent(reactor)
     d = agent.request(
         'GET',
-        'http://localhost:8000/files/?method=getfile&fileid=1',
+        'http://localhost:8000/files/?method=getfile&pboxid=1&fileid=1',
         Headers({'User-Agent': ['Twisted Web Client Example'],
                  'Content-Type': ['text/x-greeting']}),
         None)

@@ -167,9 +167,9 @@ class Files(Resource):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'fileid' not specifeid."} }
 
-            # if ('pboxid' not in request.args.keys()) & (error == None):
-            #     error = { 'status': {'error': "Invalid Request",
-            #              'message': "Argument 'pboxid' not specified."} }
+            if ('pboxid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'pboxid' not specified."} }
             elif (error == None):
                 df = getFileInfo(request.args);
                 df.addCallback(retGetFile_cb, request)
@@ -224,8 +224,9 @@ class Files(Resource):
 
     # PUT Methods:
     #
-    # putfile: To register (create) a new PBox.
+    # putfile: To upload a file.
     # 'method' = "putfile"
+    # 'pboxid' = "<user's pbox id>"
     # 'name' = <file name>
     def render_PUT(self, request):
         error = None;
@@ -239,7 +240,6 @@ class Files(Resource):
             if ('name' not in request.args.keys()):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'name' not specified."} }
-
             print request.args['method']
 
         else:
