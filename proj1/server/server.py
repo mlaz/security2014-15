@@ -144,6 +144,7 @@ class Files(Resource):
     # 'fileid' = <the file id>
     # 'pboxid' = <the pbox id>
     def render_GET(self, request):
+        print type(request.content)
         error = None;
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
@@ -177,6 +178,7 @@ class Files(Resource):
                 df.addCallback(retGetFile_cb, request)
 
             print request.args['method']
+
 
         else:
             error = { 'status': {'error': "Invalid Request",
@@ -231,51 +233,38 @@ class Files(Resource):
     # 'pboxid' = "<user's pbox id>"
     # 'name' = <file name>
     def render_PUT(self, request):
-        print request.args['method']
+        error = None;
+        if 'method' not in request.args.keys():
+            error = { 'status': {'error': "Invalid Request",
+                     'message': "Argument 'method' not specified."} }
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        # print type(request)
-        # a = request.content.read(1372)
-        # print a
+        # putfile:
+        if request.args['method'] == ['putfile']:
+            if ('pboxid' not in request.args.keys()):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'pboxid' not specified."} }
 
-        def requestFinish_cb(ignore):
-            file.close()
-            request.finish()
+            if ('name' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'name' not specified."} }
 
-        producer = FD2FileProducer(request)
-        file = open("RECEIVED.txt", "w")
-        cons = FileConsumer(file)
-        cons.registerProducer(producer, True)
-        d = producer.startProducing(cons)
-        d.addCallback(requestFinish_cb)
+            if ('iv' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'iv' not specified."} }
+            if ('key' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'key' not specified."} }
 
+            print request.args['method']
+            return handlePutFile(request)
 
-        # error = None;
-        # if 'method' not in request.args.keys():
-        #     error = { 'status': {'error': "Invalid Request",
-        #              'message': "Argument 'method' not specified."} }
-        #     return json.dumps(error, sort_keys=True, encoding="utf-8")
+        else:
+            error = { 'status': {'error': "Invalid Request",
+                     'message': "Unknown method for this resource."} }
+            pprint(request.__dict__)
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        # # putfile:
-        # if request.args['method'] == ['putfile']:
-        #     if ('name' not in request.args.keys()):
-        #         error = { 'status': {'error': "Invalid Request",
-        #                  'message': "Argument 'name' not specified."} }
-        #     print request.args['method']
-
-        # else:
-        #     error = { 'status': {'error': "Invalid Request",
-        #              'message': "Unknown method for this resource."} }
-
-        # if error != None:
-        #     pprint(request.__dict__)
-        #     return json.dumps(error, sort_keys=True, encoding="utf-8")
-
-
-
-#       newdata = request.content.getvalue()
-#       print newdata
-#       request.finish()
-        return NOT_DONE_YET
 
     # DELETE Methods:
     #

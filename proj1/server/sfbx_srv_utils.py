@@ -4,6 +4,7 @@ from twisted.python.log import err
 from twisted.web.server import NOT_DONE_YET
 from twisted.internet import abstract, defer, reactor
 from twisted.web import iweb
+from twisted.protocols.ftp import FileConsumer
 
 from zope import interface
 from pprint import pprint
@@ -127,14 +128,13 @@ def getFileInfo(args):
 # retGetFile_cb(): Callback for registerPBox(), sends the file back to the client.
 def retGetFile_cb (data, request):
 
-    row_dict = { 'FileId': data[0][0], 'OwnerPBoxId': data[0][1] }
-
     #TODO: Implement infrastructure for ownership checking (add field)
-
-    file = open(str(row_dict['OwnerPBoxId']) + "/" + str(row_dict['FileId']) ,"r")
+    # path = <OwnerPBoxId>/<FileId>
+    file = open(str(data[0][1]) + "/" + str(data[0][0]) ,"r")
     sender = FileSender()
     sender.CHUNK_SIZE = 200
     df = sender.beginFileTransfer(file, request)
+
     def finishTrnf_cb(ignored):
         file.close()
         request.finish()
@@ -143,6 +143,63 @@ def retGetFile_cb (data, request):
     df.addCallback(finishTrnf_cb)
     return NOT_DONE_YET
 
+# handlePutFile(): This is done in 3 steps:
+# 1 - Inserts entry on the Files table;
+# 2 - Queries for the new file's Id;
+# 3 - Write file to disk
+def handlePutFile(request):
+#    pprint(request.__dict__)
+
+    def finishRequest(ignore,file):
+        file.close()
+        request.finish()
+
+    # TODO: we shouf try a way of rollback
+    #  if anything goes wrong at this point
+    # This method should start writing the file to the disk.
+    def writeFile(data):
+        pboxid = str(request.args['pboxid'])
+        pboxid = strip_text(pboxid)
+        # path = <OwnerPBoxId>/<FileId>
+        file = open(pboxid + "/" + str(data[0][0]) ,"w")
+        prod = FD2FileProducer(request)
+        cons = FileConsumer(file)
+        cons.registerProducer(prod, True)
+        d = prod.startProducing(cons)
+        d.addCallback(finishRequest, file)
+
+        return NOT_DONE_YET
+
+    # This query should retreive the highest file number for a given pboxid
+    def getFilePath(data):
+        pboxid = str(request.args['pboxid'])
+        pboxid = strip_text(pboxid)
+        d = dbpool.runQuery(
+            "SELECT FileId " +
+            "FROM File " +
+            "WHERE OwnerPBoxId = ? " +
+            "ORDER BY FileId DESC",
+            (pboxid,))
+        d.addCallback(writeFile)
+
+        return NOT_DONE_YET
+
+    #
+    pboxid = str(request.args['pboxid'])
+    pboxid = strip_text(pboxid)
+    filename = str(request.args['name'])
+    filename = strip_text(filename)
+    iv = str(request.args['iv'])
+    iv = strip_text(iv)
+    symkey = str(request.args['key'])
+    symkey = strip_text(symkey)
+
+    d = dbpool.runQuery(
+        "INSERT INTO File (OwnerPBoxId, FileName, IV, SymKey) VALUES (?, ?, ?, ?);",
+        (pboxid, filename, iv, symkey));
+    d.addCallback(getFilePath)
+
+    return NOT_DONE_YET
 
 
 # Share related operations:
@@ -151,6 +208,7 @@ def retGetFile_cb (data, request):
 
 # Misc:
 #
+
 # strip_text(): helper function for stripping text from "[","]" and "'"
 def strip_text(txt):
     txt = txt.strip("[")
@@ -180,9 +238,6 @@ class FD2FileProducer(object):
 
     def _scheduleSomeProducing(self):
         self._delayedProduce = reactor.callLater(0, self._produceSome)
-
-    # def write(self, data):
-    #     self._request.write(data)
 
     def _produceSome(self):
         if self._paused:
@@ -222,4 +277,3 @@ class FD2FileProducer(object):
         if self._delayedProduce is not None:
             self._delayedProduce.cancel()
         self._deferred = None
-

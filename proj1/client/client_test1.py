@@ -6,6 +6,8 @@ from zope import interface
 from twisted.internet import abstract, defer, reactor
 from twisted.web import client, http_headers, iweb
 
+# The file test.mp3 was used for testing this module during development
+# it's at the files resource for this project on code.ua.pt
 
 class _FileProducer(object):  # pragma: no cover
     """
@@ -21,9 +23,6 @@ class _FileProducer(object):  # pragma: no cover
         self.length = iweb.UNKNOWN_LENGTH
 
     def startProducing(self, consumer):
-        """
-        Starts producing to the given consumer.
-        """
         print "START"
         self._consumer = consumer
         self._deferred = defer.Deferred()
@@ -31,19 +30,9 @@ class _FileProducer(object):  # pragma: no cover
         return self._deferred
 
     def _scheduleSomeProducing(self):
-        """
-        Schedules some producing.
-        """
         self._delayedProduce = reactor.callLater(0, self._produceSome)
 
     def _produceSome(self):
-        """
-        Reads some data from the file synchronously, writes it to the
-        consumer, and cooperatively schedules the next read. If no data is
-        left, fires the deferred and loses the reference to it.
-
-        If paused, does nothing.
-        """
         if self._paused:
             return
 
@@ -59,27 +48,18 @@ class _FileProducer(object):  # pragma: no cover
                 self._deferred = None
 
     def pauseProducing(self):
-        """
-        Pauses the producer.
-        """
         print "PAUSE"
         self._paused = True
         if self._delayedProduce is not None:
             self._delayedProduce.cancel()
 
     def resumeProducing(self):
-        """
-        Unpauses the producer.
-        """
         print "RESUME"
         self._paused = False
         if self._deferred is not None:
             self._scheduleSomeProducing()
 
     def stopProducing(self):
-        """
-        Loses a reference to the deferred.
-        """
         print "STOP"
         if self._delayedProduce is not None:
             self._delayedProduce.cancel()
@@ -92,11 +72,14 @@ if __name__ == "__main__":
         file.close()
         reactor.stop()
 
-    file = open('recfile.exe', 'rb')
+    file = open('recfile', 'rb')
     producer = _FileProducer(file)
     headers = http_headers.Headers()
 
     agent = client.Agent(reactor)
-    df = agent.request("PUT", "http://localhost:8000/files/?method=putfile&name=sfsd", headers, producer)
+    df = agent.request(
+        "PUT",
+        "http://localhost:8000/files/?method=putfile&pboxid=1&name=PinkFloyd&iv=12345&key=54321",
+        headers, producer)
     df.addCallback(cb)
     reactor.run()
