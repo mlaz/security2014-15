@@ -117,7 +117,7 @@ def listFiles_cb (data, request):
     request.write(json.dumps(reply_dict, encoding="utf-8"));
     request.finish()
 
-# returnFile(): Retrieves metadata for a given fileid.
+# getFileInfo(): Retrieves metadata for a given fileid.
 def getFileInfo(args):
     fileid = str(args['fileid'])
     fileid = strip_text(fileid)
@@ -125,7 +125,7 @@ def getFileInfo(args):
     return dbpool.runQuery(
         "SELECT * FROM File WHERE FileId = ?", (fileid,));
 
-# retGetFile_cb(): Callback for registerPBox(), sends the file back to the client.
+# retGetFile_cb(): Callback for getFileInfo(), sends the file back to the client.
 def retGetFile_cb (data, request):
 
     #TODO: Implement infrastructure for ownership checking (add field)
@@ -201,6 +201,37 @@ def handlePutFile(request):
 
     return NOT_DONE_YET
 
+#TODO add some error handling to file I/O operations
+#handleDeleteFile: Checks if a given file exists on fs and db then deletes it.
+def handleDeleteFile(request):
+
+    #if the file is on the database deletes it
+    def checkAndDelete(data):
+        if len(data) == 0:
+            #write some error msg
+        else:
+            os.remove("data")
+            #write a suuccess message to request
+
+        request.finish
+
+
+    pboxid = str(request.args['pboxid'])
+    pboxid = strip_text(pboxid)
+    fileid = str(request.args['fileid'])
+    fileid = strip_text(fileid)
+    if os.path.exists(file_path) == True:
+        df = dbpool.runQuery(
+            "SELECT FileId " +
+            "FROM File " +
+            "WHERE FileId = ? AND OwnerPBoxId = ? " +
+            "ORDER BY FileId DESC",
+            (fileid, pboxid))
+        df.addCallback(checkAndDelete)
+        return NOT_DONE_YET
+
+    #write some error msg
+    request.finish
 
 # Share related operations:
 #
@@ -217,7 +248,7 @@ def strip_text(txt):
     return txt
 
 #TODO: add error handling on file io operations
-# class FD2FileProducer:
+# class FD2FileProducer: This class is a IBodyProducer used to read chunked data from http requests
 class FD2FileProducer(object):
     interface.implements(iweb.IBodyProducer)
 

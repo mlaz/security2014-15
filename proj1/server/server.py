@@ -13,10 +13,6 @@ import json
 
 from  sfbx_srv_utils import *
 
-
-# dbfilename = "safebox.sqlite"
-# dbpool = adbapi.ConnectionPool("sqlite3", dbfilename, check_same_thread=False)
-
 # class Session(Resource):
 #     isLeaf = True
 
@@ -271,13 +267,14 @@ class Files(Resource):
         pprint(request.__dict__)
         return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-    # TODO : An handler for this method should be written
-    # We will need to delete every entry reated to the given filenumber
-    # on th Share table.
+ 
+    # TODO: We will need to delete every entry reated to the given filenumber
+    # on the Share table.
     # DELETE Methods:
     #
     # delete: To delete a file.
     # 'method' = "delete"
+    # 'pboxid' = <the pbox id>
     # 'fileid' = <the file id>
     def render_DELETE(self, request):
         error = None;
@@ -289,22 +286,24 @@ class Files(Resource):
 
         # delete:
         if request.args['method'] == ['delete']:
-            if 'fileid' not in request.args.keys():
+            if 'pboxid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'fileid' not specified."} }
+                         'message': "Argument 'pboxid' not specified."} }
+
+            if ('fileid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "Argument 'fileid' not specified."} }
 
             print request.args['method']
+            if error is None:
+                return handleDeleteFile(request)
+
+        error = { 'status': {'error': "Invalid Request",
+                    'message': "Unknown method for this resource."} }
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
 
 
-        else:
-            error = { 'status': {'error': "Invalid Request",
-                     'message': "Unknown method for this resource."} }
-
-        if error != None:
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
-
-        return NOT_DONE_YET
 
 # The Shares Resource:
 #
@@ -450,6 +449,7 @@ class Shares(Resource):
     # delete: To delete (unshare) a shared file.
     # 'method' = "delete"
     # 'fileid' = <the file id>
+    # 'pboxid' = <the user's pbox id>
     def render_DELETE(self, request):
         error = None;
 
@@ -476,8 +476,6 @@ class Shares(Resource):
             pprint(request.__dict__)
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        newdata = request.content.getvalue()
-        print newdata
         return NOT_DONE_YET
 
 
