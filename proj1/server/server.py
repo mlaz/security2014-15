@@ -191,6 +191,8 @@ class Files(Resource):
 
         return NOT_DONE_YET
 
+    # TODO: Implement an handler for this method
+    # should be just like handlePutFile with some more checking
     # POST Methods:
     #
     # updatefile: To update (reupload) a file.
@@ -232,6 +234,8 @@ class Files(Resource):
     # 'method' = "putfile"
     # 'pboxid' = "<user's pbox id>"
     # 'name' = <file name>
+    # 'iv' = <iv used to encrypt the file>
+    # 'key' = <symmetric key used to encrypt the file>
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
@@ -252,20 +256,24 @@ class Files(Resource):
             if ('iv' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
                           'message': "Argument 'iv' not specified."} }
+
             if ('key' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
                           'message': "Argument 'key' not specified."} }
 
             print request.args['method']
-            return handlePutFile(request)
-
-        else:
-            error = { 'status': {'error': "Invalid Request",
-                     'message': "Unknown method for this resource."} }
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            if error is None:
+                return handlePutFile(request)
 
 
+        error = { 'status': {'error': "Invalid Request",
+                'message': "Unknown method for this resource."} }
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+    # TODO : An handler for this method should be written
+    # We will need to delete every entry reated to the given filenumber
+    # on th Share table.
     # DELETE Methods:
     #
     # delete: To delete a file.

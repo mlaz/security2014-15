@@ -143,13 +143,13 @@ def retGetFile_cb (data, request):
     df.addCallback(finishTrnf_cb)
     return NOT_DONE_YET
 
-# handlePutFile(): This is done in 3 steps:
+# handlePutFile(): This method handles putfile method.
+# This is done in 3 steps:
 # 1 - Inserts entry on the Files table;
 # 2 - Queries for the new file's Id;
 # 3 - Write file to disk
 def handlePutFile(request):
 #    pprint(request.__dict__)
-
     def finishRequest(ignore,file):
         file.close()
         request.finish()
