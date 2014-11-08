@@ -11,7 +11,7 @@ from pprint import pprint
 import json
 import os
 
-from  sfbx_srv_utils import *
+from  sfbx_storage import SafeBoxStorage
 
 # class Session(Resource):
 #     isLeaf = True
@@ -51,8 +51,7 @@ class PBoxes(Resource):
         # list:
         if request.args['method'] == ['list']:
             print request.args['method']
-            df = listPBoxes();
-            df.addCallback(listPBoxes_cb, request)
+            return storage.listPBoxes(request);
 
         # get_mdata:
         elif request.args['method'] == ['get_mdata']:
@@ -63,19 +62,17 @@ class PBoxes(Resource):
 
             else:
                 print request.args['ccid']
-                df = getPBoxMData(request.args);
-                df.addCallback(getPBoxMData_cb, request)
+                return storage.getPBoxMData(request);
+
 
         # Unknown method:
-        else:
-            error = { 'status': {'error': "Invalid Request", 'message': "Unknown method for this resource."} }
+        if error == None:
+            error = { 'status': {'error': "Invalid Request",
+                    'message': "Unknown method for this resource."} }
 
-        if error != None:
-            print request.args['method']
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        return NOT_DONE_YET
 
 
     # PUT Methods:
@@ -109,18 +106,13 @@ class PBoxes(Resource):
                          'message': "Argument 'pubkey' not specified."} }
 
             elif (error == None):
-                df = registerPBox(request.args);
-                df.addCallback(registerPBox_cb, request)
+                return storage.registerPBox(request);
 
-        else:
-            error = { 'status': {'error': "Invalid Request",
-                     'message': "Unknown method for this resource."} }
+        error = { 'status': {'error': "Invalid Request",
+                'message': "Unknown method for this resource."} }
 
-        if error != None:
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
-
-        return NOT_DONE_YET
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
 
 # The Files Resource:
 #
@@ -142,6 +134,7 @@ class Files(Resource):
     def render_GET(self, request):
         print type(request.content)
         error = None;
+
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
@@ -155,10 +148,8 @@ class Files(Resource):
                          'message': "Argument 'pboxid' not specified."} }
 
             elif (error == None):
-                df = listFiles(request.args);
-                df.addCallback(listFiles_cb, request)
+                return storage.listFiles(request)
 
-            print request.args['method']
 
         # getfile:
         elif request.args['method'] == ['getfile']:
@@ -169,23 +160,19 @@ class Files(Resource):
             if ('pboxid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
                           'message': "Argument 'pboxid' not specified."} }
+
             elif (error == None):
-                df = getFileInfo(request.args);
-                df.addCallback(retGetFile_cb, request)
-
-            print request.args['method']
+                return storage.getFile(request)
 
 
-        else:
+        elif (error == None):
             error = { 'status': {'error': "Invalid Request",
-                     'message': "Unknown method for this resource."} }
+                        'message': "Unknown method for this resource."} }
 
-        if error != None:
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+        print request.args['method']
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-
-        return NOT_DONE_YET
 
     # POST Methods:
     #
@@ -199,28 +186,33 @@ class Files(Resource):
                      'message': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        pprint(request.__dict__)
-
-        # updatefile:
-        if request.args['method'] == ['updatefile']:
-            if 'fileid' not in request.args.keys():
+        # putfile:
+        if request.args['method'] == ['putfile']:
+            if ('pboxid' not in request.args.keys()):
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'fileid' not specified."} }
+                         'message': "Argument 'pboxid' not specified."} }
+
+            if ('name' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'name' not specified."} }
+
+            if ('iv' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'iv' not specified."} }
+
+            if ('key' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'key' not specified."} }
 
             print request.args['method']
-
-        else:
-            error = { 'status': {'error': "Invalid Request",
-                     'message': "Unknown method for this resource."} }
-
-        if error != None:
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            if error is None:
+                return storage.updateFile(request)
 
 
-        newdata = request.content.getvalue()
-        print newdata
-        return NOT_DONE_YET
+        error = { 'status': {'error': "Invalid Request",
+                'message': "Unknown method for this resource."} }
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
 
     # PUT Methods:
     #
@@ -257,7 +249,7 @@ class Files(Resource):
 
             print request.args['method']
             if error is None:
-                return putFile(request)
+                return storage.putFile(request)
 
 
         error = { 'status': {'error': "Invalid Request",
@@ -294,7 +286,7 @@ class Files(Resource):
 
             print request.args['method']
             if error is None:
-                return deleteFile(request)
+                return storage.deleteFile(request)
 
         error = { 'status': {'error': "Invalid Request",
                     'message': "Unknown method for this resource."} }
@@ -478,6 +470,8 @@ class Shares(Resource):
 
 
 if __name__ == "__main__":
+
+    storage = SafeBoxStorage()
     root = Resource()
 #    root.putChild("session", Session())
     root.putChild("pboxes", PBoxes())
