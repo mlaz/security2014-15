@@ -10,7 +10,7 @@ from zope import interface
 from pprint import pprint
 
 import json
-
+import os
 
 dbfilename = "safebox.sqlite"
 dbpool = adbapi.ConnectionPool("sqlite3", dbfilename, check_same_thread=False)
@@ -143,21 +143,21 @@ def retGetFile_cb (data, request):
     df.addCallback(finishTrnf_cb)
     return NOT_DONE_YET
 
-# handlePutFile(): This method handles putfile method.
+# putFile(): This method handles putfile method.
 # This is done in 3 steps:
 # 1 - Inserts entry on the Files table;
 # 2 - Queries for the new file's Id;
 # 3 - Write file to disk
-def handlePutFile(request):
+def putFile(request):
 #    pprint(request.__dict__)
-    def finishRequest(ignore,file):
+    def finishRequest_cb(ignore,file):
         file.close()
         request.finish()
 
-    # TODO: we shouf try a way of rollback
+    # TODO: we shoud try a way of rollback
     #  if anything goes wrong at this point
     # This method should start writing the file to the disk.
-    def writeFile(data):
+    def writeFile_cb(data):
         pboxid = str(request.args['pboxid'])
         pboxid = strip_text(pboxid)
         # path = <OwnerPBoxId>/<FileId>
@@ -166,12 +166,12 @@ def handlePutFile(request):
         cons = FileConsumer(file)
         cons.registerProducer(prod, True)
         d = prod.startProducing(cons)
-        d.addCallback(finishRequest, file)
+        d.addCallback(finishRequest_cb, file)
 
         return NOT_DONE_YET
 
     # This query should retreive the highest file number for a given pboxid
-    def getFilePath(data):
+    def getFilePath_cb(data):
         pboxid = str(request.args['pboxid'])
         pboxid = strip_text(pboxid)
         d = dbpool.runQuery(
@@ -180,7 +180,7 @@ def handlePutFile(request):
             "WHERE OwnerPBoxId = ? " +
             "ORDER BY FileId DESC",
             (pboxid,))
-        d.addCallback(writeFile)
+        d.addCallback(writeFile_cb)
 
         return NOT_DONE_YET
 
@@ -197,32 +197,66 @@ def handlePutFile(request):
     d = dbpool.runQuery(
         "INSERT INTO File (OwnerPBoxId, FileName, IV, SymKey) VALUES (?, ?, ?, ?);",
         (pboxid, filename, iv, symkey));
-    d.addCallback(getFilePath)
+    d.addCallback(getFilePath_cb)
 
     return NOT_DONE_YET
 
-#TODO add some error handling to file I/O operations
-#handleDeleteFile: Checks if a given file exists on fs and db then deletes it.
-def handleDeleteFile(request):
+####################### WIP ################################
 
-    #if the file is on the database deletes it
-    def checkAndDelete(data):
-        if len(data) == 0:
-            #write some error msg
-        else:
-            os.remove("data")
-            #write a suuccess message to request
+# updateFile(): This method handles updatefile method.
+# This is done in 3 steps:
+# 1 - Inserts entry on the Files table;
+# 2 - Queries for the new file's Id;
+# 3 - Write file to disk
+def updateFile(request):
+#    pprint(request.__dict__)
+    def finishRequest_cb(ignore,file):
+        file.close()
+        request.finish()
 
-        request.finish
+    # TODO: we shoud try a way of rollback
+    #  if anything goes wrong at this point
+    # This method should start writing the file to the disk.
+    def writeFile_cb(data):
+        pboxid = str(request.args['pboxid'])
+        pboxid = strip_text(pboxid)
+        # path = <OwnerPBoxId>/<FileId>
+        file = open(pboxid + "/" + str(data[0][0]) ,"w")
+        prod = FD2FileProducer(request)
+        cons = FileConsumer(file)
+        cons.registerProducer(prod, True)
+        d = prod.startProducing(cons)
+        d.addCallback(finishRequest_cb, file)
 
+        return NOT_DONE_YET
 
+    # This query should retreive the highest file number for a given pboxid
+    def getFilePath_cb(data):
+        pboxid = str(request.args['pboxid'])
+        pboxid = strip_text(pboxid)
+        d = dbpool.runQuery(
+            "SELECT FileId " +
+            "FROM File " +
+            "WHERE OwnerPBoxId = ? " +
+            "ORDER BY FileId DESC",
+            (pboxid,))
+        d.addCallback(writeFile_cb)
+
+        return NOT_DONE_YET
+
+    #
     pboxid = str(request.args['pboxid'])
     pboxid = strip_text(pboxid)
-    fileid = str(request.args['fileid'])
-    fileid = strip_text(fileid)
+    filename = str(request.args['name'])
+    filename = strip_text(filename)
+    iv = str(request.args['iv'])
+    iv = strip_text(iv)
+    symkey = str(request.args['key'])
+    symkey = strip_text(symkey)
+
     if os.path.exists(file_path) == True:
         df = dbpool.runQuery(
-            "SELECT FileId " +
+            "SELECT FileId, OwnerPBoxId " +
             "FROM File " +
             "WHERE FileId = ? AND OwnerPBoxId = ? " +
             "ORDER BY FileId DESC",
@@ -230,8 +264,54 @@ def handleDeleteFile(request):
         df.addCallback(checkAndDelete)
         return NOT_DONE_YET
 
-    #write some error msg
-    request.finish
+    # the file does not exist on fs.
+    #write some error msg "
+    request.finish() #instead of this return error
+####################### /WIP ################################
+
+#TODO add some error handling to file I/O operations
+#deleteFile: Checks if a given file exists on fs and db then deletes it.
+def deleteFile(request):
+    pboxid = str(request.args['pboxid'])
+    pboxid = strip_text(pboxid)
+    fileid = str(request.args['fileid'])
+    fileid = strip_text(fileid)
+    file_path = pboxid + "/" + fileid
+
+    # 3 - Deleting the file.
+    def deleteAndFinish_cb(ignored):
+        os.remove(file_path)
+        request.finish()
+
+    # 2 - Deleting table entry for referenced file if the file exists.
+    def checkAndDelete_cb(data):
+        if len(data) == 0:
+            #write some error msg
+            request.finish()
+
+        else:
+            df = dbpool.runQuery(
+                "DELETE " +
+                "FROM File " +
+                "WHERE FileId = ? AND OwnerPBoxId = ? ",
+                (fileid, pboxid))
+            df.addCallback(deleteAndFinish_cb)
+
+    # 1 - Checking if the file exists.
+    if os.path.exists(file_path) == True:
+        df = dbpool.runQuery(
+            "SELECT FileId, OwnerPBoxId " +
+            "FROM File " +
+            "WHERE FileId = ? AND OwnerPBoxId = ? " +
+            "ORDER BY FileId DESC",
+            (fileid, pboxid))
+        df.addCallback(checkAndDelete_cb)
+        return NOT_DONE_YET
+
+    # the file does not exist on fs.
+    #write some error msg "
+    request.finish() #instead of this return error
+
 
 # Share related operations:
 #

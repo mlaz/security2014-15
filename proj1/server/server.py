@@ -9,7 +9,7 @@ from datetime import datetime
 from pprint import pprint
 
 import json
-#import os
+import os
 
 from  sfbx_srv_utils import *
 
@@ -187,8 +187,6 @@ class Files(Resource):
 
         return NOT_DONE_YET
 
-    # TODO: Implement an handler for this method
-    # should be just like handlePutFile with some more checking
     # POST Methods:
     #
     # updatefile: To update (reupload) a file.
@@ -259,7 +257,7 @@ class Files(Resource):
 
             print request.args['method']
             if error is None:
-                return handlePutFile(request)
+                return putFile(request)
 
 
         error = { 'status': {'error': "Invalid Request",
@@ -267,7 +265,7 @@ class Files(Resource):
         pprint(request.__dict__)
         return json.dumps(error, sort_keys=True, encoding="utf-8")
 
- 
+
     # TODO: We will need to delete every entry reated to the given filenumber
     # on the Share table.
     # DELETE Methods:
@@ -296,7 +294,7 @@ class Files(Resource):
 
             print request.args['method']
             if error is None:
-                return handleDeleteFile(request)
+                return deleteFile(request)
 
         error = { 'status': {'error': "Invalid Request",
                     'message': "Unknown method for this resource."} }
