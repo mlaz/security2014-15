@@ -1,17 +1,14 @@
 from twisted.web.resource import Resource
 from twisted.web.server import Site
 from twisted.internet import reactor, defer
-from twisted.enterprise import adbapi
 from twisted.web.server import NOT_DONE_YET
-from twisted.protocols.ftp import FileConsumer
 
-from datetime import datetime
+#from datetime import datetime
 from pprint import pprint
 
 import json
-import os
 
-from  sfbx_storage import SafeBoxStorage
+from  sfbx_access_control import AccessCtrlHandler
 
 # class Session(Resource):
 #     isLeaf = True
@@ -51,7 +48,7 @@ class PBoxes(Resource):
         # list:
         if request.args['method'] == ['list']:
             print request.args['method']
-            return storage.listPBoxes(request);
+            return handler.handleListPBoxes(request);
 
         # get_mdata:
         elif request.args['method'] == ['get_mdata']:
@@ -62,7 +59,7 @@ class PBoxes(Resource):
 
             else:
                 print request.args['ccid']
-                return storage.getPBoxMData(request);
+                return handler.handleGetPBoxMData(request);
 
 
         # Unknown method:
@@ -106,7 +103,7 @@ class PBoxes(Resource):
                          'message': "Argument 'pubkey' not specified."} }
 
             elif (error == None):
-                return storage.registerPBox(request);
+                return handler.handleRegisterPBox(request);
 
         error = { 'status': {'error': "Invalid Request",
                 'message': "Unknown method for this resource."} }
@@ -148,7 +145,7 @@ class Files(Resource):
                          'message': "Argument 'pboxid' not specified."} }
 
             elif (error == None):
-                return storage.listFiles(request)
+                return handler.handleListFiles(request)
 
 
         # getfile:
@@ -162,7 +159,7 @@ class Files(Resource):
                           'message': "Argument 'pboxid' not specified."} }
 
             elif (error == None):
-                return storage.getFile(request)
+                return handler.handleGetFile(request)
 
 
         elif (error == None):
@@ -206,7 +203,7 @@ class Files(Resource):
 
             print request.args['method']
             if error is None:
-                return storage.updateFile(request)
+                return handler.handleUpdateFile(request)
 
 
         error = { 'status': {'error': "Invalid Request",
@@ -249,7 +246,7 @@ class Files(Resource):
 
             print request.args['method']
             if error is None:
-                return storage.putFile(request)
+                return handler.handlePutFile(request)
 
 
         error = { 'status': {'error': "Invalid Request",
@@ -286,7 +283,7 @@ class Files(Resource):
 
             print request.args['method']
             if error is None:
-                return storage.deleteFile(request)
+                return handler.handleDeleteFile(request)
 
         error = { 'status': {'error': "Invalid Request",
                     'message': "Unknown method for this resource."} }
@@ -471,7 +468,7 @@ class Shares(Resource):
 
 if __name__ == "__main__":
 
-    storage = SafeBoxStorage()
+    handler = AccessCtrlHandler()
     root = Resource()
 #    root.putChild("session", Session())
     root.putChild("pboxes", PBoxes())
