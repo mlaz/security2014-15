@@ -16,5 +16,5 @@ CREATE TABLE Share (FileId INTEGER NOT NULL, ForeignPBoxId INTEGER NOT NULL, Sym
 INSERT INTO Share VALUES (1, 2, 'asd', 'fgh', 1);
 INSERT INTO Share VALUES (2, 2, 'zxc', 'vbn', 1);
 SELECT * FROM Share;
-SELECT File.FileId, OwnerPBoxId, ForeignPBoxId FROM File, Share WHERE File.FileId = Share.FileId;
+SELECT FileName, File.FileId, OwnerPBoxId, ForeignPBoxId FROM File, Share WHERE File.FileId = Share.FileId;
 "

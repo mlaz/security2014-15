@@ -13,7 +13,7 @@ DROP TABLE IF EXISTS [Share];
 ********************************************************************************/
 CREATE TABLE [PBox]
 (
-    [PBoxId] INTEGER PRIMARY KEY,
+    [PBoxId] INTEGER PRIMARY KEY AUTOINCREMENT,
     [UserCCId] NVARCHAR(160)  NOT NULL,
     [PubKey] TEXT  NOT NULL,
     [UserName] NVARCHAR(160)  NOT NULL
@@ -21,7 +21,7 @@ CREATE TABLE [PBox]
 
 CREATE TABLE [File]
 (
-    [FileId] INTEGER PRIMARY KEY,
+    [FileId] INTEGER PRIMARY KEY AUTOINCREMENT,
     [OwnerPBoxId] INTEGER  NOT NULL,
     [FileName] TEXT NOT NULL,
     [IV] TEXT NOT NULL,
