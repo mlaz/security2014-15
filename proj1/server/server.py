@@ -10,16 +10,50 @@ import json
 
 from  sfbx_access_control import AccessCtrlHandler
 
-# class Session(Resource):
-#     isLeaf = True
+# The Session Resource:
+#
+# Handles requests related to client id validation.
+#
+class Session(Resource):
+    isLeaf = True
 
-#     def render_POST(self, request):
-#         pprint(request.__dict__)
-#         #START SESSION
-#         #END SESSION
-#         newdata = request.content.getvalue()
-#         print newdata
-#         return "hello form"
+    # GET Methods:
+    #
+    # getticket: To get an access ticket.
+    # 'method' = "getticket"
+    # 'usrccid' = <user's cc id number> #should we receive this encrypted
+    #
+    # getkey: To get the server's public key.
+    # 'method' = "getkey"
+    def render_GET(self, request):
+
+        error = None;
+        if 'method' not in request.args.keys():
+            error = { 'status': {'error': "Invalid Request",
+                     'message': "Argument 'method' not specified."} }
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+
+        # getticket:
+        if request.args['method'] == ['getticket']:
+            if 'ccid' not in request.args.keys():
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not provided."} }
+            else:
+                print request.args['method']
+                return handler.handleListPBoxes()
+
+        # getkey:
+        elif request.args['method'] == ['getkey']:
+            return handler.handleGetKey()
+
+        # Unknown method:
+        if error == None:
+            error = { 'status': {'error': "Invalid Request",
+                    'message': "Unknown method for this resource."} }
+
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
 
 # The PBoxes Resource:
 #
@@ -48,7 +82,7 @@ class PBoxes(Resource):
         # list:
         if request.args['method'] == ['list']:
             print request.args['method']
-            return handler.handleListPBoxes(request);
+            return handler.handleListPBoxes(request)
 
         # get_mdata:
         elif request.args['method'] == ['get_mdata']:
@@ -59,7 +93,7 @@ class PBoxes(Resource):
 
             else:
                 print request.args['ccid']
-                return handler.handleGetPBoxMData(request);
+                return handler.handleGetPBoxMData(request)
 
 
         # Unknown method:
@@ -78,7 +112,7 @@ class PBoxes(Resource):
     # 'method' = "register"
     # 'ccid' = <user's Portuguese Cityzen Card number>
     # 'name' = <user's real name>
-    # 'pubkey' = <user's public key>
+    # 'pubkey' = <user's public key> #TODO: receive this in body
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
@@ -470,7 +504,7 @@ if __name__ == "__main__":
 
     handler = AccessCtrlHandler("rsakeys", "mypass")
     root = Resource()
-#    root.putChild("session", Session())
+    root.putChild("session", Session())
     root.putChild("pboxes", PBoxes())
     root.putChild("files", Files())
     root.putChild("shares", Shares())

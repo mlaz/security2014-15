@@ -1,4 +1,4 @@
-from sfbx_access_control import ServerIdentity, TicketManager
+from sfbx_access_control import ServerIdentity, TicketManager, AccessCtrlHandler
 from Crypto import Random
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
@@ -7,6 +7,7 @@ from Crypto.PublicKey import RSA
 if __name__ == "__main__":
 
     print "Testing ServerIdentity: "
+
     sid = ServerIdentity("rsakeys", "mypass")
     print sid.priv_key
     print sid.pub_key
@@ -15,10 +16,6 @@ if __name__ == "__main__":
 
     signature = sid.signData("Hello!:)")
     print sid.verifySignature(signature, "Hello!:)")
-
-
-#    file = open("MyFile", 'r')
-#    data = file.read(100)
 
     data = str(Random.get_random_bytes(64))
 
@@ -50,3 +47,8 @@ if __name__ == "__main__":
 
     if tm.validateTicket(sig1_enc, 1, sid.pub_key):
         print "OK"
+
+    print "Testing AccessCtrlHandler: "
+
+    handler = AccessCtrlHandler("rsakeys", "mypass")
+    print handler.handleGetKey() 

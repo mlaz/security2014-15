@@ -1,5 +1,7 @@
 #!/bin/bash
 printf "\nResource: pboxes, Mehtod: list\n"
+curl -X GET 'http://localhost:8000/session/?method=getkey' 
+printf "\nResource: pboxes, Mehtod: list\n"
 curl -X GET 'http://localhost:8000/pboxes/?method=list'
 printf "\n\nResource: pboxes, Mehtod: get_mdata\n"
 curl -X GET 'http://localhost:8000/pboxes/?method=get_mdata&ccid=123456789'

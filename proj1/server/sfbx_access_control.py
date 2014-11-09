@@ -7,7 +7,7 @@ from Crypto import Random
 
 from base64 import b64encode, b64decode
 from pprint import pprint
-
+import json
 from  sfbx_storage import SafeBoxStorage
 
 TICKET_TIMEOUT = 3
@@ -104,11 +104,24 @@ class AccessCtrlHandler(object):
 
     def __init__(self, keys_dirname=0, password=0):
        self.server = ServerIdentity(keys_dirname, password)
-       #self.ticket_manager = TicketManager(server)
+#       self.ticket_manager = TicketManager(self.server)
        self.storage = SafeBoxStorage()
 
-# Handling PBoxes resource related operations:
-#
+    # Handling Session resource related operations:
+    #
+
+    def handleGetKey(self):
+        key = self.server.pub_key.exportKey('PEM')
+        print key
+        reply_dict = { 'status': "OK", 'list': key }
+        return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
+
+    # def handleGetKey(request):
+    #     return
+
+    # Handling PBoxes resource related operations:
+    #
+
     def handleListPBoxes(self, request):
         return self.storage.listPBoxes(request)
 
@@ -118,8 +131,8 @@ class AccessCtrlHandler(object):
     def handleRegisterPBox(self, request):
         return self.storage.registerPBox(request)
 
-# Handling Files resource related operations:
-#
+    # Handling Files resource related operations:
+    #
 
     def handleListFiles(self, request):
         return self.storage.listFiles(request)
@@ -136,6 +149,5 @@ class AccessCtrlHandler(object):
     def handleDeleteFile(self, request):
         return self.storage.deleteFile(request)
 
-# Handling Share resource related operations:
-
-#
+    # Handling Share resource related operations:
+    #
