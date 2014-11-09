@@ -8,7 +8,7 @@ from Crypto import Random
 from base64 import b64encode, b64decode
 from pprint import pprint
 import json
-from  sfbx_storage import SafeBoxStorage
+from  sfbx_storage import SafeBoxStorage, strip_text
 
 TICKET_TIMEOUT = 3
 
@@ -116,7 +116,11 @@ class AccessCtrlHandler(object):
         reply_dict = { 'status': "OK", 'list': key }
         return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
 
-    # def handleGetKey(request):
+    # def handleGetTicket(request):
+        
+    #     token = 
+    #     reply_dict = { 'status': "OK", 'ticket': ticket}
+    #     return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
     #     return
 
     # Handling PBoxes resource related operations:
