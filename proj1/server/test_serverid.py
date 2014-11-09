@@ -1,9 +1,10 @@
-from sfbx_access_control import ServerIdentity
+from sfbx_access_control import ServerIdentity, TicketManager
 
 
 
 if __name__ == "__main__":
 
+    print "Testing ServerIdentity: "
     sid = ServerIdentity("rsakeys", "mypass")
     print sid.priv_key
     print sid.pub_key
@@ -23,6 +24,17 @@ if __name__ == "__main__":
     dec_data = sid.decryptData(enc_data)
     print dec_data
 
-    print dec_data == data
+    if dec_data == data:
+        print "OK"
 
-    
+    print "Testing TicketManager: "
+
+    tm = TicketManager(sid)
+    t1 = tm.generateTicket(1, sid.pub_key)
+
+    t1 = sid.decryptData(t1)
+    sig1 = sid.signData(t1)
+    sig1_enc = sid.encryptData(sig1)
+
+    if tm.validateTicket(sig1_enc):
+        print "OK"

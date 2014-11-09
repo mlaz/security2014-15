@@ -1,10 +1,13 @@
-from  sfbx_storage import SafeBoxStorage
+from twisted.internet import reactor
+
 from Crypto.PublicKey import RSA
 # from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 from Crypto import Random
 
 from base64 import b64encode, b64decode
+
+from  sfbx_storage import SafeBoxStorage
 
 TICKET_TIMEOUT = 3
 
@@ -26,7 +29,7 @@ class ServerIdentity(object):
         self.priv_key = RSA.importKey(file.read(), password)
         file.close()
 
-        file = open(dir_name + "/private.pem", 'r')
+        file = open(dir_name + "/public.pem", 'r')
         self.pub_key = RSA.importKey(file.read(), password)
         file.close()
 
@@ -63,28 +66,28 @@ class TicketManager():
         self.active_tickets = {}
 
     #generateTicket:
-    def generateTicket(pboxid, cli_key):
+    def generateTicket(self, pboxid, cli_key):
+        def removeTicket_cb(pboxid):
+            del self.active_tickets[pboxid]
+
         if pboxid in self.active_tickets.keys():
             self.active_tickets[pboxid]['timeout'].cancel()
             del self.active_tickets[pboxid]
 
         ticket = Random.get_random_bytes(64)
-        timeout = reactor.callLater(removeTicket_cb, pboxid)
-        self.active_tickets.update({pboxid: {'ticket': ticket, pboxid, 'timeout': callid}})
+        timeout = reactor.callLater(TICKET_TIMEOUT * 60, removeTicket_cb, pboxid)
+        self.active_tickets.update({pboxid: {'ticket': ticket,  'timeout': timeout}})
         return self.server.encryptData(ticket, cli_key)
 
     #validateTicket:
-    def validateTicket(signature, pboxid, cli_key):
+    def validateTicket(self, signature, pboxid, cli_key):
         if pboxid in self.active_tickets.keys():
             self.active_tickets[pboxid]['timeout'].cancel()
             ticket = self.active_tickets[pboxid]['ticket']
             del self.active_tickets[pboxid]
 
-        return verifySignature(signature, ticket, cli_key)
-
-    #removeTicket_cb: removeTicket_cb
-    def removeTicket_cb(pboxid):
-        del self.active_tickets[pboxid]
+        signature = self.server.decryptData(signature)
+        return self.server.verifySignature(signature, ticket, cli_key)
 
 
 # class AccessCtrlHandler:
@@ -92,8 +95,8 @@ class TicketManager():
 # which is done when handling every http request received.
 class AccessCtrlHandler(object):
 
-    def __init__(self, keys_file_path=0, password=0):
-       self.server = ServerIdentity(keys_file_path, password)
+    def __init__(self, keys_dirname=0, password=0):
+       self.server = ServerIdentity(keys_dirname, password)
        #self.ticket_manager = TicketManager(server)
        self.storage = SafeBoxStorage()
 

@@ -468,7 +468,7 @@ class Shares(Resource):
 
 if __name__ == "__main__":
 
-    handler = AccessCtrlHandler()
+    handler = AccessCtrlHandler("rsakeys", "mypass")
     root = Resource()
 #    root.putChild("session", Session())
     root.putChild("pboxes", PBoxes())
