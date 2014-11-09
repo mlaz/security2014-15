@@ -1,11 +1,12 @@
 from twisted.internet import reactor
 
 from Crypto.PublicKey import RSA
-# from Crypto.Signature import PKCS1_v1_5
+from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 from Crypto import Random
 
 from base64 import b64encode, b64decode
+from pprint import pprint
 
 from  sfbx_storage import SafeBoxStorage
 
@@ -33,6 +34,9 @@ class ServerIdentity(object):
         self.pub_key = RSA.importKey(file.read(), password)
         file.close()
 
+        self.signer = PKCS1_v1_5.new(self.priv_key)
+        self.verifier = PKCS1_v1_5.new(self.pub_key)
+
         self.rnd = Random.new()
 
     def encryptData(self, data, key=None):
@@ -46,20 +50,20 @@ class ServerIdentity(object):
         return key.decrypt(data)
 
     def signData(self, data):
-        hash = SHA256.new(data).digest()
-        return self.priv_key.sign(hash, '')
+        hash = SHA256.new(data)
+        return self.signer.sign(hash)
 
     def verifySignature(self, signature, data, key=None):
         if key is None:
             key = self.pub_key
-        hash = SHA256.new(data).digest()
-        return key.verify(hash, signature)
+        hash = SHA256.new(data)
+        return self.verifier.verify(hash, signature)
 
 # class TicketManager:
 # This class provides a facility generating and validating tickets which will be signed
 # by the client and sent back to the server inside a request body. A ticket is only valid
 # for a single request and lasts for <TICKET_TIMEOUT> minutes.
-class TicketManager():
+class TicketManager(object):
 
     def __init__(self, identity):
         self.server = identity
@@ -74,10 +78,13 @@ class TicketManager():
             self.active_tickets[pboxid]['timeout'].cancel()
             del self.active_tickets[pboxid]
 
-        ticket = Random.get_random_bytes(64)
+        ticket = str(Random.get_random_bytes(64))
+#        pprint(ticket)
+#        print type(ticket)
+        enc_ticket = self.server.encryptData(ticket , self.server.pub_key)
         timeout = reactor.callLater(TICKET_TIMEOUT * 60, removeTicket_cb, pboxid)
         self.active_tickets.update({pboxid: {'ticket': ticket,  'timeout': timeout}})
-        return self.server.encryptData(ticket, cli_key)
+        return enc_ticket
 
     #validateTicket:
     def validateTicket(self, signature, pboxid, cli_key):
