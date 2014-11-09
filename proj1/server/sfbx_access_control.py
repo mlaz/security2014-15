@@ -1,5 +1,12 @@
 from  sfbx_storage import SafeBoxStorage
+from Crypto.PublicKey import RSA
+# from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
+from Crypto import Random
 
+from base64 import b64encode, b64decode
+
+TICKET_TIMEOUT = 3
 
 #
 # SafeBox server access control utilities API:
@@ -12,49 +19,85 @@ from  sfbx_storage import SafeBoxStorage
 # class ServerIdentity:
 # This class provides a facility for managing the application's cryptographic identity
 # and preforming cryptographic operations on given data.
-class ServerIdentity():
+class ServerIdentity(object):
 
-    def __init__(self, keys_file_path, password):
-        # f = open('private-key.pem', 'r')
-        # self = priv_key = RSA.importKey(f.read(),  passphrase='some-pass')
-        # f.close()
-        return
+    def __init__(self, dir_name, password):
+        file = open(dir_name + "/private.pem", 'r')
+        self.priv_key = RSA.importKey(file.read(), password)
+        file.close()
 
-    def encryptData(self, data):
-        return 0
+        file = open(dir_name + "/private.pem", 'r')
+        self.pub_key = RSA.importKey(file.read(), password)
+        file.close()
 
-    def decryptData(self, data):
-        return 0
+        self.rnd = Random.new()
+
+    def encryptData(self, data, key=None):
+        if key is None:
+            key = self.pub_key
+        return key.encrypt(data, self.rnd.read) #TODO: Be sure about this!
+
+    def decryptData(self, data, key=None):
+        if key is None:
+            key = self.priv_key
+        return key.decrypt(data)
 
     def signData(self, data):
-        return 0
+        hash = SHA256.new(data).digest()
+        return self.priv_key.sign(hash, '')
 
-    def checkSignature(self, data, ext_pubkey):
-        return 0
+    def verifySignature(self, signature, data, key=None):
+        if key is None:
+            key = self.pub_key
+        hash = SHA256.new(data).digest()
+        return key.verify(hash, signature)
 
+# class TicketManager:
+# This class provides a facility generating and validating tickets which will be signed
+# by the client and sent back to the server inside a request body. A ticket is only valid
+# for a single request and lasts for <TICKET_TIMEOUT> minutes.
 class TicketManager():
 
     def __init__(self, identity):
         self.server = identity
         self.active_tickets = {}
 
-    def generateTicket():
-        return 0
+    #generateTicket:
+    def generateTicket(pboxid, cli_key):
+        if pboxid in self.active_tickets.keys():
+            self.active_tickets[pboxid]['timeout'].cancel()
+            del self.active_tickets[pboxid]
 
-    def validateTicket():
-        return 0
+        ticket = Random.get_random_bytes(64)
+        timeout = reactor.callLater(removeTicket_cb, pboxid)
+        self.active_tickets.update({pboxid: {'ticket': ticket, pboxid, 'timeout': callid}})
+        return self.server.encryptData(ticket, cli_key)
+
+    #validateTicket:
+    def validateTicket(signature, pboxid, cli_key):
+        if pboxid in self.active_tickets.keys():
+            self.active_tickets[pboxid]['timeout'].cancel()
+            ticket = self.active_tickets[pboxid]['ticket']
+            del self.active_tickets[pboxid]
+
+        return verifySignature(signature, ticket, cli_key)
+
+    #removeTicket_cb: removeTicket_cb
+    def removeTicket_cb(pboxid):
+        del self.active_tickets[pboxid]
+
 
 # class AccessCtrlHandler:
 # This class provides a facility for validation of access permissions and client identity,
 # which is done when handling every http request received.
-class AccessCtrlHandler:
+class AccessCtrlHandler(object):
 
     def __init__(self, keys_file_path=0, password=0):
        self.server = ServerIdentity(keys_file_path, password)
        #self.ticket_manager = TicketManager(server)
        self.storage = SafeBoxStorage()
 
-# PBoxes resource related operations:
+# Handling PBoxes resource related operations:
 #
     def handleListPBoxes(self, request):
         return self.storage.listPBoxes(request)
@@ -65,7 +108,7 @@ class AccessCtrlHandler:
     def handleRegisterPBox(self, request):
         return self.storage.registerPBox(request)
 
-# Files resource related operations:
+# Handling Files resource related operations:
 #
 
     def handleListFiles(self, request):
@@ -83,5 +126,6 @@ class AccessCtrlHandler:
     def handleDeleteFile(self, request):
         return self.storage.deleteFile(request)
 
-# Share resource related operations:
+# Handling Share resource related operations:
+
 #

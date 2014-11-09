@@ -92,7 +92,7 @@ class FD2FileProducer(object):
 
 # class SafeBoxStorage: This class provides methods for
 # preforming operations on SafeBox's storage facilities (filesystem & database).
-class SafeBoxStorage():
+class SafeBoxStorage(object):
 
 
     def __init__(self, dbfilename="safebox.sqlite"):
