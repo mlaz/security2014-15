@@ -42,7 +42,7 @@ class PBoxes(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
 
         # list:
@@ -68,7 +68,7 @@ class PBoxes(Resource):
                     'message': "Unknown method for this resource."} }
 
         pprint(request.__dict__)
-        return json.dumps(error, sort_keys=True, encoding="utf-8")
+        return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
 
 
@@ -84,7 +84,7 @@ class PBoxes(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         # register:
         if request.args['method'] == ['register']:
@@ -109,7 +109,7 @@ class PBoxes(Resource):
                 'message': "Unknown method for this resource."} }
 
         pprint(request.__dict__)
-        return json.dumps(error, sort_keys=True, encoding="utf-8")
+        return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
 # The Files Resource:
 #
@@ -135,7 +135,7 @@ class Files(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
 
         # list:
@@ -168,7 +168,7 @@ class Files(Resource):
 
         print request.args['method']
         pprint(request.__dict__)
-        return json.dumps(error, sort_keys=True, encoding="utf-8")
+        return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
 
     # POST Methods:
@@ -181,7 +181,7 @@ class Files(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         # putfile:
         if request.args['method'] == ['putfile']:
@@ -209,7 +209,7 @@ class Files(Resource):
         error = { 'status': {'error': "Invalid Request",
                 'message': "Unknown method for this resource."} }
         pprint(request.__dict__)
-        return json.dumps(error, sort_keys=True, encoding="utf-8")
+        return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
     # PUT Methods:
     #
@@ -224,7 +224,7 @@ class Files(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         # putfile:
         if request.args['method'] == ['putfile']:
@@ -252,7 +252,7 @@ class Files(Resource):
         error = { 'status': {'error': "Invalid Request",
                 'message': "Unknown method for this resource."} }
         pprint(request.__dict__)
-        return json.dumps(error, sort_keys=True, encoding="utf-8")
+        return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
 
     # TODO: We will need to delete every entry reated to the given filenumber
@@ -268,7 +268,7 @@ class Files(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
 
         # delete:
@@ -288,7 +288,7 @@ class Files(Resource):
         error = { 'status': {'error': "Invalid Request",
                     'message': "Unknown method for this resource."} }
         pprint(request.__dict__)
-        return json.dumps(error, sort_keys=True, encoding="utf-8")
+        return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
 
 
@@ -309,7 +309,7 @@ class Shares(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         pprint(request.__dict__)
 
@@ -327,7 +327,7 @@ class Shares(Resource):
 
         if error != None:
             pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         return NOT_DONE_YET
 
@@ -342,7 +342,7 @@ class Shares(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         pprint(request.__dict__)
 
@@ -364,7 +364,7 @@ class Shares(Resource):
 
         if error != None:
             pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         newdata = request.content.getvalue()
         print newdata
@@ -387,7 +387,7 @@ class Shares(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         pprint(request.__dict__)
 
@@ -425,7 +425,7 @@ class Shares(Resource):
 
         if error != None:
             pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         newdata = request.content.getvalue()
         print newdata
@@ -443,7 +443,7 @@ class Shares(Resource):
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
                      'message': "Argument 'method' not specified."} }
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         pprint(request.__dict__)
 
@@ -461,7 +461,7 @@ class Shares(Resource):
 
         if error != None:
             pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+            return json.dumps(error, sort_keys=True, ensure_ascii=True)
 
         return NOT_DONE_YET
 
