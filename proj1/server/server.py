@@ -66,10 +66,11 @@ class PBoxes(Resource):
     #
     # list: To list all pboxes.
     # 'method' = "list"
+    # 'ccid' = <user's cc id number>
     #
     # get_mdata: To a pbox's metadata.
     # 'method' = "get_mdata"
-    # 'usrccid' = <user's cc id number>
+    # 'ccid' = <user's cc id number>
     def render_GET(self, request):
 
         error = None;
@@ -81,8 +82,14 @@ class PBoxes(Resource):
 
         # list:
         if request.args['method'] == ['list']:
-            print request.args['method']
-            return handler.handleListPBoxes(request)
+
+
+            if 'ccid' not in request.args.keys():
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not provided."} }
+            else:
+                print request.args['method']
+                return handler.handleListPBoxes(request)
 
         # get_mdata:
         elif request.args['method'] == ['get_mdata']:
@@ -154,12 +161,12 @@ class Files(Resource):
     #
     # list: To list all files on user's pbox.
     # 'method' = "list"
-    # 'pboxid' = <the pbox id>
+    # '' = <the pbox id>
     #
     # getfile: To download a file from user's pbox.
     # 'method' = "getfile"
     # 'fileid' = <the file id>
-    # 'pboxid' = <the pbox id>
+    # 'ccid' = <the pbox id>
     def render_GET(self, request):
         print type(request.content)
         error = None;
@@ -172,9 +179,13 @@ class Files(Resource):
 
         # list:
         if request.args['method'] == ['list']:
-            if 'pboxid' not in request.args.keys():
+            if 'ccid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'pboxid' not specified."} }
+                         'message': "Argument 'ccid' not specified."} }
+            #TODO: You don't need this, change it!
+            if ('pboxid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'pboxid' not specified."} }
 
             elif (error == None):
                 return handler.handleListFiles(request)
@@ -207,6 +218,7 @@ class Files(Resource):
     #
     # updatefile: To update (reupload) a file.
     # 'method' = "updatefile"
+    # 'ccid' = <user's ccid>
     # 'fileid' = <the file id>
     def render_POST(self, request):
         error = None;
@@ -217,9 +229,9 @@ class Files(Resource):
 
         # putfile:
         if request.args['method'] == ['putfile']:
-            if ('pboxid' not in request.args.keys()):
+            if ('ccid' not in request.args.keys()):
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'pboxid' not specified."} }
+                         'message': "Argument 'ccid' not specified."} }
 
             if ('name' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
@@ -247,7 +259,7 @@ class Files(Resource):
     #
     # putfile: To upload a file.
     # 'method' = "putfile"
-    # 'pboxid' = "<user's pbox id>"
+    # 'ccid' = <user's ccid>
     # 'name' = <file name>
     # 'iv' = <iv used to encrypt the file>
     # 'key' = <symmetric key used to encrypt the file>
@@ -260,9 +272,9 @@ class Files(Resource):
 
         # putfile:
         if request.args['method'] == ['putfile']:
-            if ('pboxid' not in request.args.keys()):
+            if ('ccid' not in request.args.keys()):
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'pboxid' not specified."} }
+                         'message': "Argument 'ccid' not specified."} }
 
             if ('name' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
@@ -293,7 +305,7 @@ class Files(Resource):
     #
     # delete: To delete a file.
     # 'method' = "delete"
-    # 'pboxid' = <the pbox id>
+    # 'ccid' = <the ccid>
     # 'fileid' = <the file id>
     def render_DELETE(self, request):
         error = None;
@@ -305,9 +317,9 @@ class Files(Resource):
 
         # delete:
         if request.args['method'] == ['delete']:
-            if 'pboxid' not in request.args.keys():
+            if 'ccid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'pboxid' not specified."} }
+                         'message': "Argument 'ccid' not specified."} }
 
             if ('fileid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
@@ -335,7 +347,9 @@ class Shares(Resource):
     #
     # getshared: To download a shared file.
     # 'method' = "getshared"
+    # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'fileid' = <the file id>
+
     def render_GET(self, request):
         error = None;
         if 'method' not in request.args.keys():
@@ -367,6 +381,7 @@ class Shares(Resource):
     #
     # sharefile: To share a file.
     # 'method' = "sharefile"
+    # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'fileid' = <the file id>
     # 'ruserid' = <recipient's user id> TODO: define what this is!
     def render_POST(self, request):
@@ -406,12 +421,14 @@ class Shares(Resource):
     #
     # updateshare: To update a share (ex.: change write permissions).
     # 'method' = "updateshare"
+    # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'fileid' = <the file id>
-    # 'ruserid' = <recipient's user id> TODO: define what this is!
+    # 'rccid' = <recipient's user ccid> TODO: define what this is!
     # 'attrname' = <the share's attribute to change>
     # 'newval' = <the new value>
     #
     # updatesfile: To update (modify) a shared file.
+    # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'method' = "updatesfile"
     # 'fileid' = <the file id>
     def render_PUT(self, request):
@@ -467,8 +484,9 @@ class Shares(Resource):
     #
     # delete: To delete (unshare) a shared file.
     # 'method' = "delete"
+    # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'fileid' = <the file id>
-    # 'pboxid' = <the user's pbox id>
+    # 'rccid' = <the recipient's ccid>
     def render_DELETE(self, request):
         error = None;
 

@@ -100,8 +100,19 @@ class SafeBoxStorage(object):
 
 # PBox related operations:
 #
+
+    # getClientKey(): Retreives PBoxId and PubKey for internal usage.
+    def getClientData(self, request):
+        ccid_str = str(request.args['ccid'])
+        ccid_str = strip_text(ccid_str)
+
+        d = self.dbpool.runQuery(
+            "SELECT PBoxId, PubKey FROM PBox WHERE UserCCId = ?", (ccid_str,))
+        return d
+
     # listPBoxes(): Queries for all entries on PBox's basic meta-data attributes.
-    def listPBoxes(self, request):
+    def listPBoxes(self, request, pboxid):
+        # TODO: take 
         # listPBoxes_cb(): Callback for listPBoxes(), processes retrieved data for reply.
         def listPBoxes_cb(data):
             data_dict = {}
@@ -126,7 +137,7 @@ class SafeBoxStorage(object):
 
     # getPBoxMData(): Queries the data base for all entries on all
     # PBox's attributes for given ccid.
-    def getPBoxMData(self, request):
+    def getPBoxMData(self, request, ignore):
         ccid_str = str(request.args['ccid'])
         ccid_str = strip_text(ccid_str)
 
@@ -180,21 +191,12 @@ class SafeBoxStorage(object):
         d.addCallback(registerPBox_cb)
         return NOT_DONE_YET
 
-    # getClientKey(): Retreives PBoxId and PubKey for internal usage.
-    def getClientData(self, request):
-        ccid_str = str(request.args['ccid'])
-        ccid_str = strip_text(ccid_str)
-
-        d = self.dbpool.runQuery(
-            "SELECT PBoxId, PubKey FROM PBox WHERE UserCCId = ?", (ccid_str,))
-        return d
-
 # File related operations:
 #
     # listFiles(): Retrieves FileName and FileId attributes for a given pboxid.
-    def listFiles(self, request):
-        pboxid = str(request.args['pboxid'])
-        pboxid = strip_text(pboxid)
+    def listFiles(self, request, pboxid):
+        # pboxid = str(request.args['pboxid'])
+        # pboxid = strip_text(pboxid)
 
         # listFiles_cb(): Callback for listFiles(), produces the reply from the database query result.
         def listFiles_cb (data):
@@ -220,7 +222,7 @@ class SafeBoxStorage(object):
 
     # getFile(): Retrieves metadata for a given fileid,
     # then writes the file contents to the response body.
-    def getFile(self, request):
+    def getFile(self, request, pboxid):
         fileid = str(request.args['fileid'])
         fileid = strip_text(fileid)
 
@@ -230,9 +232,22 @@ class SafeBoxStorage(object):
 
         # getFile_cb(): Callback for getFile(), sends the file back to the client.
         def getFile_cb(data):
-            #TODO: Implement infrastructure for ownership checking (add field)
-            # path = <OwnerPBoxId>/<FileId>
-            file = open(str(data[0][1]) + "/" + str(data[0][0]) ,"r")
+            if not data:
+                error = { 'status': {'error': "Invalid Request",
+                                     'message': "File does not exist."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+
+
+            file_path = str(data[0][1]) + "/" + str(data[0][0])
+            if not os.path.exists(file_path):
+                error = { 'status': {'error': "Invalid Request",
+                                     'message': "File does not exist."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+
+
+            file = open(file_path ,"r")
             sender = FileSender()
             sender.CHUNK_SIZE = 200
             df = sender.beginFileTransfer(file, request)
@@ -241,7 +256,7 @@ class SafeBoxStorage(object):
             df.addCallback(finishTrnf_cb, file)
 
         d = self.dbpool.runQuery(
-            "SELECT * FROM File WHERE FileId = ?", (fileid,));
+            "SELECT * FROM File WHERE FileId = ? AND OwnerPBoxId = ?", (fileid,pboxid));
         d.addCallback(getFile_cb)
         return NOT_DONE_YET
 
@@ -250,7 +265,7 @@ class SafeBoxStorage(object):
     # 1 - Inserts entry on the Files table;
     # 2 - Queries for the new file's Id;
     # 3 - Write file to disk
-    def putFile(self, request):
+    def putFile(self, request, pboxid):
         #    pprint(request.__dict__)
         def finishRequest_cb(ignore,file):
             file.close()
@@ -260,8 +275,8 @@ class SafeBoxStorage(object):
         #  if anything goes wrong at this point
         # This method should start writing the file to the disk.
         def writeFile_cb(data):
-            pboxid = str(request.args['pboxid'])
-            pboxid = strip_text(pboxid)
+            # pboxid = str(request.args['pboxid'])
+            # pboxid = strip_text(pboxid)
             # path = <OwnerPBoxId>/<FileId>
             file = open(pboxid + "/" + str(data[0][0]) ,"w")
             prod = FD2FileProducer(request)
@@ -274,8 +289,8 @@ class SafeBoxStorage(object):
 
         # This query should retreive the highest file number for a given pboxid
         def getFilePath_cb(data):
-            pboxid = str(request.args['pboxid'])
-            pboxid = strip_text(pboxid)
+            # pboxid = str(request.args['pboxid'])
+            # pboxid = strip_text(pboxid)
             d = self.dbpool.runQuery(
                 "SELECT FileId " +
                 "FROM File " +
@@ -286,9 +301,9 @@ class SafeBoxStorage(object):
 
             return NOT_DONE_YET
 
-        #
-        pboxid = str(request.args['pboxid'])
-        pboxid = strip_text(pboxid)
+        # pboxid now from handleValidation
+        # pboxid = str(request.args['pboxid'])
+        # pboxid = strip_text(pboxid)
         filename = str(request.args['name'])
         filename = strip_text(filename)
         iv = str(request.args['iv'])
@@ -310,7 +325,7 @@ class SafeBoxStorage(object):
     # 1 - Inserts entry on the Files table;
     # 2 - Queries for the new file's Id;
     # 3 - Write file to disk
-    def updateFile(self, request):
+    def updateFile(self, request, pboxid):
         #    pprint(request.__dict__)
         def finishRequest_cb(ignore,file):
             file.close()
@@ -373,9 +388,7 @@ class SafeBoxStorage(object):
 
     #TODO add some error handling to file I/O operations
     #deleteFile: Checks if a given file exists on fs and db then deletes it.
-    def deleteFile(self, request):
-        pboxid = str(request.args['pboxid'])
-        pboxid = strip_text(pboxid)
+    def deleteFile(self, request, pboxid):
         fileid = str(request.args['fileid'])
         fileid = strip_text(fileid)
         file_path = pboxid + "/" + fileid
@@ -388,7 +401,9 @@ class SafeBoxStorage(object):
         # 2 - Deleting table entry for referenced file if the file exists.
         def checkAndDelete_cb(data):
             if len(data) == 0:
-                #write some error msg
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "File does not exist."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
                 request.finish()
 
             else:
@@ -411,9 +426,55 @@ class SafeBoxStorage(object):
             return NOT_DONE_YET
 
         # the file does not exist on fs.
-        #write some error msg "
-        request.finish() #instead of this return error
+        error = { 'status': {'error': "Invalid Request",
+                        'message': "File does not exist."} }
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
+
 
 
 # Share related operations:
 #
+
+
+    # #TODO add some error handling to file I/O operations
+    # #deleteFile: Checks if a given file exists on fs and db then deletes it.
+    # def deleteShare(self, request):
+    #     pboxid = str(request.args['pboxid'])
+    #     pboxid = strip_text(pboxid)
+    #     fileid = str(request.args['fileid'])
+    #     fileid = strip_text(fileid)
+    #     file_path = pboxid + "/" + fileid
+
+    #     # 3 - Deleting the file.
+    #     def deleteAndFinish_cb(ignored):
+    #         os.remove(file_path)
+    #         request.finish()
+
+    #     # 2 - Deleting table entry for referenced file if the file exists.
+    #     def checkAndDelete_cb(data):
+    #         if len(data) == 0:
+    #             #write some error msg
+    #             request.finish()
+
+    #         else:
+    #             df = self.dbpool.runQuery(
+    #                 "DELETE " +
+    #                 "FROM File " +
+    #                 "WHERE FileId = ? AND OwnerPBoxId = ? ",
+    #                 (fileid, pboxid))
+    #             df.addCallback(deleteAndFinish_cb)
+
+    #     # 1 - Checking if the file exists.
+    #     if os.path.exists(file_path) == True:
+    #         df = self.dbpool.runQuery(
+    #             "SELECT FileId, OwnerPBoxId " +
+    #             "FROM File " +
+    #             "WHERE FileId = ? AND OwnerPBoxId = ? " +
+    #             "ORDER BY FileId DESC",
+    #             (fileid, pboxid))
+    #         df.addCallback(checkAndDelete_cb)
+    #         return NOT_DONE_YET
+
+    #     # the file does not exist on fs.
+    #     #write some error msg "
+    #     request.finish() #instead of this return error

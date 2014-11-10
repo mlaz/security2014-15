@@ -98,7 +98,7 @@ class TicketManager(object):
             original = self.active_tickets[pboxid]['ticket']
             del self.active_tickets[pboxid]
 
-        signature = self.server.decryptData(b64decode(signature))
+        signature = self.server.decryptData(b64decode(str(signature)))#TEST THIS!
         return self.server.verifySignature(signature, original, cli_key)
 
 
@@ -144,13 +144,17 @@ class AccessCtrlHandler(object):
         d.addCallback(getTicket_cb)
         return NOT_DONE_YET
 
-    def handleValidation(self, request, method):
-
-        ticket = request.content.read()
+    # handleValidation: handles the validation process for a given method
+    # only calls method if the provided ticket is valid.
+    def handleValidation(self, request, method, ticket=None):
+        # ticket will only exist from arguments when this method
+        # is being called to validate data transfer operations
         if not ticket:
-            reply_dict = { 'status': {'error': "Invalid Request",
+            ticket = request.content.read()
+            if not ticket:
+                reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No ticket on request body."} }
-            return json.dumps(reply_dict, encoding="utf-8")
+                return json.dumps(reply_dict, encoding="utf-8")
 
 
         def handleValidation_cb(data):
@@ -164,7 +168,7 @@ class AccessCtrlHandler(object):
                 print pubkey
 
                 if self.ticket_manager.validateTicket(ticket, pboxid, pubkey):
-                    d = method(request)
+                    d = method(request, pboxid)
                     return NOT_DONE_YET
 
                 else:
@@ -181,16 +185,9 @@ class AccessCtrlHandler(object):
     # Handling PBoxes resource related operations:
     #
 
+    #handle ListPBoxes
     def handleListPBoxes(self, request):
         #pprint(request.__dict__)
-
-        # TODO: evaluate if this code should be moved to handleValidation
-        # Checking if ticket exists.
-        # ticket = request.content.read()
-        # if not ticket:
-        #     reply_dict = { 'status': {'error': "Invalid Request",
-        #                               'message': "No ticket on request body."} }
-        #     return json.dumps(reply_dict, encoding="utf-8")
 
         return self.handleValidation(request, self.storage.listPBoxes)
 
@@ -231,20 +228,19 @@ class AccessCtrlHandler(object):
     # Handling Files resource related operations:
     #
     def handleListFiles(self, request):
-        
         return handleValidation(request, self.storage.listFiles)
 
     def handleGetFile(self, request):
-        return self.storage.getFile(request)
+        return handleValidation(request, self.storage.getFile)
 
-    def handlePutFile(self, request):
-        return self.storage.putFile(request)
+    def handlePutFile(self, request):#
+        return handleValidation(request, self.storage.putFile)
 
-    def handleUpdateFile(self, request):
-        return self.storage.updateFile(request)
+    def handleUpdateFile(self, request):#
+        return handleValidation(request, self.storage.updateFile)
 
     def handleDeleteFile(self, request):
-        return self.storage.deleteFile(request)
+        return handleValidation(request, self.storage.deleteFile)
 
     # Handling Share resource related operations:
     #
