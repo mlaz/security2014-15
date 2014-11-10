@@ -38,6 +38,24 @@ class BeginningPrinter(Protocol):
         print 'Response:\n', formatResponse(self.total_response)
         print 'Finished receiving body: ', reason.getErrorMessage()
 
+class getKey(Protocol):
+    def __init__(self, finished):
+        self.finished = finished
+        self.total_response = ""
+
+    def dataReceived(self, bytes):
+        self.total_response += bytes
+
+    def connectionLost(self, reason):
+        print 'The key is:\n', formatKey(self.total_response)
+
+def formatKey(response):
+    response = json.loads(response, object_hook=_decode_dict)
+    if (response["status"] == ["error"]):
+        print(response["error"])
+    else:
+        print(response["list"])
+
 def formatResponse(response):
     response = json.loads(response, object_hook=_decode_dict)
     if (response["status"] == ["error"]):
@@ -152,3 +170,52 @@ class SafeBoxClient():
 
     def handleDelete(self, line):
         return
+
+    def handleRegister(self, line):
+        def handleRegister_cb(response):
+
+            return NOT_DONE_YET
+        
+        agent = Agent(reactor)
+        s = line.split()
+        username = s[1]
+        ccnumber = s[2]
+        password = s[3]
+        d = agent.request(
+                    'PUT',
+                    'http://localhost:8000/pboxes/?method=register&ccid='+ ccnumber +'&name=' + username + '&pubkey=' + password,
+                    Headers({'User-Agent': ['Twisted Web Client Example'],
+                    'Content-Type': ['text/x-greeting']}),
+                    None)
+
+        d.addCallback(handleRegister_cb)
+        return NOT_DONE_YET
+    
+    def handleLogin(self, line):
+        s = line.split()
+        if not s[1]:
+            return "Erro"
+        return "Sucesso"
+
+    def handleGetKey(self):
+        def handleGetKey_cb(response):
+            print 'Response version:', response.version
+            print 'Response code:', response.code
+            print 'Response phrase:', response.phrase
+            print 'Response headers:'
+            print pformat(list(response.headers.getAllRawHeaders()))
+            defer = Deferred()
+            response.deliverBody(getKey(defer))
+            return NOT_DONE_YET
+
+        agent = Agent(reactor)
+        d = agent.request(
+                    'GET',
+                    'http://localhost:8000/session/?method=getkey',
+                    Headers({'User-Agent': ['Twisted Web Client Example'],
+                    'Content-Type': ['text/x-greeting']}),
+                    None)
+
+        d.addCallback(handleGetKey_cb)
+
+        return NOT_DONE_YET

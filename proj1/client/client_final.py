@@ -4,9 +4,10 @@ from sfbx_client_utils import SafeBoxClient
 
 class Echo(basic.LineReceiver):
     delimiter = "\n"
+    control = 0
 
     def connectionMade(self):
-        self.transport.write("Welcome to SafeBox command application.\nType help to see a list of commands.\n")
+        self.transport.write("Welcome to SafeBox command application.\nType 'register <UserName> <ccNumber> <password>' or 'login <UserName> <password>' to start using the application\n")
 
     def lineReceived(self, line):
         if not line: return
@@ -14,29 +15,36 @@ class Echo(basic.LineReceiver):
         s = line.split()
         method = s[0].lower()
         
-        if method == "list":
-            print "in list"
-#           helper = SafeBoxClient()
-            return helper.handleList(line)
-        elif method == "get":
-            print "in get"
-            return helper.handleGet(line)
-        elif method == "put":
-            print "in put"
-            return helper.handlePut(line)
-        elif method == "update":
-            print "in update"
-            return helper.handleUpdate(line)
-        elif method == "delete":
-            print "in delete"
-            return helper.handleDelete(line)
-        elif method == "help":
-            self.sendLine("\nThe availabe commands are:\nlist pboxes\nlist files\nget file <fileId>\nupdate file <fileId>\ndelete file <fileId>\nquit")
-        elif method == "quit":
-            reactor.stop()
-            self.sendLine("Bye Bye!")
+        if not self.control:
+            if method == "register":
+                self.control = 1
+                return helper.handleRegister(line)
+            elif method == "login":
+                self.control = 1
+                return helper.handleLogin(line)
+            else:
+                self.transport.write("Error: no such command\n")
         else:
-            self.sendLine("Error: no such command.")
+            if method == "list":
+                return helper.handleList(line)
+            elif method == "get":
+                return helper.handleGet(line)
+            elif method == "put":
+                return helper.handlePut(line)
+            elif method == "update":
+                return helper.handleUpdate(line)
+            elif method == "delete":
+                return helper.handleDelete(line)
+            #for test purposes only
+            elif method == "gekkey":
+                return helper.handleGetKey()
+            elif method == "help":
+                self.transport.write("\nThe availabe commands are:\nlist pboxes\nlist files\nget file <fileId>\nupdate file <fileId>\ndelete file <fileId>\nshare file <fileId> <destinationPBoxId>\nquit\n")
+            elif method == "quit":
+                reactor.stop()
+                self.transport.write("Bye Bye!")
+            else:
+                self.transport.write("Error: no such command.\n")
 
 if __name__ == "__main__":
     helper =  SafeBoxClient()
