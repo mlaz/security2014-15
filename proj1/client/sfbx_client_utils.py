@@ -72,7 +72,8 @@ class getTicket(Protocol):
         self.total_response += bytes
 
     def connectionLost(self, reason):
-        print 'The ticket is:\n', formatTicket(self.total_response)
+        finalTicket = formatTicket(self.total_response)
+        self.finished.callback(finalTicket)
 
 def formatTicket(response):
     response = json.loads(response, object_hook=_decode_dict)
@@ -80,18 +81,17 @@ def formatTicket(response):
         print(response["error"])
     else:
         s = response["ticket"]
-        #s = s.strip("(")
-        #s = s.strip(")")
-        #s = s.strip(",")
-        #s = s.strip('"')
-        #s = s.strip("'")
         print "Encrypted Ticket: ", s
-        print len(s)
-        print "Decrypted Ticket: ", dec_ticket(s)
+        cryTicket = cr_ticket(str(s))
+        print "Decrypted Ticket: ", cryTicket
+        return cryTicket
 
-def dec_ticket(ticket):
+def cr_ticket(ticket):
     ci = ClientIdentity("rsakeys", "mypass")
-    return ci.decryptData(b64decode(ticket))
+    dci = ci.decryptData(b64decode(ticket))
+    sci = ci.signData(dci)
+    eci = ci.encryptData(sci)
+    return eci
         
 class getMData(Protocol):
     def __init__(self, finished):
@@ -117,6 +117,8 @@ def formatMData(response):
         print s
 
 def formatResponse(response):
+    response = json.dumps(response)
+    pprint(response)
     response = json.loads(response, object_hook=_decode_dict)
     if (response["status"] == ["error"]):
         print(response["error"])
@@ -166,39 +168,45 @@ class SafeBoxClient():
             print 'Response headers:'
             print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
-            #defer.addCallback(handle_result)
             response.deliverBody(BeginningPrinter(defer))
             return NOT_DONE_YET
-            #return defer
+        
+        def handleListPboxes(signedTicket):
+            agent = Agent(reactor)
+	    body = FileBodyProducer(StringIO(signedTicket))
+            d = agent.request(
+                    'GET',
+                    'http://localhost:8000/pboxes/?method=list&ccid=678909876',
+                    Headers({'User-Agent': ['Twisted Web Client Example'],
+                    'Content-Type': ['text/x-greeting']}),
+                    body)
+            d.addCallback(handleList_cb)
+            return NOT_DONE_YET
+        
+        def handleListFiles(signedTicket):
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(signedTicket))
+	    d = agent.request(
+                    'GET',
+                    'http://localhost:8000/files/?method=list&pboxid=1',
+                    Headers({'User-Agent': ['Twisted Web Client Example'],
+                    'Content-Type': ['text/x-greeting']}),
+                    body)
+            d.addCallback(handleList_cb)
+            return NOT_DONE_YET
 
-        agent = Agent(reactor)
         s = line.split()
-        if len(s) != 2:
-            print "Error: invalid arguments!\n"
-            print "Correct usage: list <pboxes|files>"
-            return
-        else:
-            if s[1].lower() != "pboxes" and s[1].lower() != "files":
-	        print "Error: invalid arguments!\n"
-	        print "Correct usage: list <pboxes|files>"
-	        return
-	    elif s[1].lower() == "pboxes":
-                d = agent.request(
-                'GET',
-                'http://localhost:8000/pboxes/?method=list',
-                Headers({'User-Agent': ['Twisted Web Client Example'],
-                'Content-Type': ['text/x-greeting']}),
-                None)
-
+        if len(s) == 2:
+            if s[1].lower() == "pboxes":
+                return self.handleGetTicket(handleListPboxes)
             elif s[1].lower() == "files":
-                d = agent.request(
-                'GET',
-                'http://localhost:8000/files/?method=list&pboxid=1',
-                Headers({'User-Agent': ['Twisted Web Client Example'],
-                'Content-Type': ['text/x-greeting']}),
-                None)
-
-        d.addCallback(handleList_cb)
+		return self.handleGetTicket(handleListFiles)
+	    else:
+		print "Error: invalid arguments!\n"
+		print "Correct usage: list <pboxes|files>"
+        else:
+	    print "Error: invalid arguments!\n"
+            print "Correct usage: list <pboxes|files>"
 
         return NOT_DONE_YET
 
@@ -321,7 +329,7 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
-    def handleGetTicket(self):
+    def handleGetTicket(self, method):
         def handleGetTicket_cb(response):
             print 'Response version: ', response.version
             print 'Response code: ', response.code
@@ -329,6 +337,7 @@ class SafeBoxClient():
             print 'Response headers: '
             print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
+            defer.addCallback(method)
             response.deliverBody(getTicket(defer))
             return NOT_DONE_YET
 
