@@ -7,6 +7,7 @@ from twisted.web import iweb
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.protocols.ftp import FileConsumer
+from bas64 import b64encode, b64decode
 from StringIO import StringIO
 from pprint import pformat
 from pprint import pprint
@@ -83,7 +84,14 @@ def formatTicket(response):
         #s = s.strip(")")
         #s = s.strip(",")
         #s = s.strip('"')
-        print s
+        #s = s.strip("'")
+        print "Encrypted Ticket: ", s
+        print len(s)
+        print "Decrypted Ticket: ", dec_ticket(s)
+
+def dec_ticket(ticket):
+    ci = ClientIdentity("rsakeys", "mypass")
+    return ci.decryptData(b64decode(ticket))
         
 class getMData(Protocol):
     def __init__(self, finished):
@@ -166,28 +174,33 @@ class SafeBoxClient():
         agent = Agent(reactor)
         s = line.split()
         if len(s) != 2:
-            print "Error: invalid arguments!"
+            print "Error: invalid arguments!\n"
+            print "Correct usage: list <pboxes|files>"
             return
         else:
-            if s[1].lower() == "pboxes":
+            if s[1].lower() != "pboxes" and s[1].lower() != "files":
+	        print "Error: invalid arguments!\n"
+	        print "Correct usage: list <pboxes|files>"
+	        return
+	    elif s[1].lower() == "pboxes":
                 d = agent.request(
-                        'GET',
-                        'http://localhost:8000/pboxes/?method=list',
-                        Headers({'User-Agent': ['Twisted Web Client Example'],
-                        'Content-Type': ['text/x-greeting']}),
-                        None)
+                'GET',
+                'http://localhost:8000/pboxes/?method=list',
+                Headers({'User-Agent': ['Twisted Web Client Example'],
+                'Content-Type': ['text/x-greeting']}),
+                None)
 
             elif s[1].lower() == "files":
                 d = agent.request(
-                        'GET',
-                        'http://localhost:8000/files/?method=list&pboxid=1',
-                        Headers({'User-Agent': ['Twisted Web Client Example'],
-                        'Content-Type': ['text/x-greeting']}),
-                        None)
+                'GET',
+                'http://localhost:8000/files/?method=list&pboxid=1',
+                Headers({'User-Agent': ['Twisted Web Client Example'],
+                'Content-Type': ['text/x-greeting']}),
+                None)
 
-            d.addCallback(handleList_cb)
+        d.addCallback(handleList_cb)
 
-            return NOT_DONE_YET
+        return NOT_DONE_YET
 
     def handleGet(self, line):
         def handleGet_cb(response, file):
@@ -205,10 +218,13 @@ class SafeBoxClient():
         agent = Agent(reactor)
         s = line.split()
         if len(s) != 3:
-            print "Error: invalid arguments!"
+            print "Error: invalid arguments!\n"
             return
         else:
-            if s[1].lower() == "file":
+            if s[1].lower() != "file":
+                print "Error: invalid arguments!\n"
+                print "Correct usage: get file <fileId>"
+            elif s[1].lower() == "file":
                 fileId = s[2].lower()
                 file = open(fileId, "w")
                 d = agent.request(
@@ -238,7 +254,8 @@ class SafeBoxClient():
         agent = Agent(reactor)
         s = line.split()
         if len(s) != 4:
-            print "Error: invalid arguments"
+            print "Error: invalid arguments\n"
+            print "Correct usage: register <username> <ccnumber> <password>"
             return
         else:
             username = s[1]
@@ -270,7 +287,8 @@ class SafeBoxClient():
     def handleLogin(self, line):
         s = line.split()
         if len(s) != 3:
-            print "Error: invalid arguments"
+            print "Error: invalid arguments\n"
+            print "Correct usage: login <username> <password>"
             return
         else:
             username = s[1]
@@ -317,7 +335,7 @@ class SafeBoxClient():
         agent = Agent(reactor)
         d = agent.request(
                 'GET',
-                'http://localhost:8000/session/?method=getticket&ccid=123456789',
+                'http://localhost:8000/session/?method=getticket&ccid=678909876',
                 Headers({'User-Agent': ['Twisted Web Client Example'],
                 'Content-Type': ['text/x-greeting']}),
                 None)

@@ -36,8 +36,14 @@ class Echo(basic.LineReceiver):
             elif method == "delete":
                 return helper.handleDelete(line)
             #for test purposes only
-            elif method == "gekkey":
+            elif method == "getkey":
                 return helper.handleGetKey()
+            #for test purposes only
+            elif method == "getticket":
+                return helper.handleGetTicket()
+            #for test purposes only
+            elif method == "getmdata":
+                return helper.handleGetMData()
             elif method == "help":
                 self.transport.write("\nThe availabe commands are:\nlist pboxes\nlist files\nget file <fileId>\nupdate file <fileId>\ndelete file <fileId>\nshare file <fileId> <destinationPBoxId>\nquit\n")
             elif method == "quit":
