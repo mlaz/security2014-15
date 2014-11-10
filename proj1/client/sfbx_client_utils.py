@@ -7,7 +7,7 @@ from twisted.web import iweb
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.protocols.ftp import FileConsumer
-from bas64 import b64encode, b64decode
+from base64 import b64encode, b64decode
 from StringIO import StringIO
 from pprint import pformat
 from pprint import pprint
