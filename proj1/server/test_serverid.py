@@ -51,4 +51,4 @@ if __name__ == "__main__":
     print "Testing AccessCtrlHandler: "
 
     handler = AccessCtrlHandler("rsakeys", "mypass")
-    print handler.handleGetKey() 
+    print handler.handleGetKey()

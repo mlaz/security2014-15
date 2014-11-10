@@ -132,15 +132,13 @@ class PBoxes(Resource):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'name' not specified."} }
 
-            if ('pubkey' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'pubkey' not specified."} }
+            # if ('pubkey' not in request.args.keys()) & (error == None):
+            #     error = { 'status': {'error': "Invalid Request",
+            #              'message': "Argument 'pubkey' not specified."} }
 
             elif (error == None):
                 return handler.handleRegisterPBox(request);
 
-        error = { 'status': {'error': "Invalid Request",
-                'message': "Unknown method for this resource."} }
 
         pprint(request.__dict__)
         return json.dumps(error, sort_keys=True, encoding="utf-8")

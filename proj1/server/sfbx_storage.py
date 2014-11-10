@@ -161,8 +161,14 @@ class SafeBoxStorage(object):
         ccid = strip_text(ccid)
         name = str(request.args['name'])
         name = strip_text(name)
-        pubkey = str(request.args['pubkey'])
-        pubkey = strip_text(pubkey)
+        # pubkey = str(request.args['pubkey'])
+        # pubkey = strip_text(pubkey)
+        #pubkey = request.content.read()
+        # if not pubkey:
+        #     reply_dict = { 'status': {'error': "Invalid Request", 'message': "No key on request body."} }
+        #     request.write(json.dumps(reply_dict, encoding="utf-8"));
+        #     request.finish()
+        #     return
 
         # registerPBox_cb(): Callback for registerPBox(),
         # produces reply according to registerPBox return value.

@@ -36,7 +36,7 @@ class ServerIdentity(object):
         file.close()
 
         self.signer = PKCS1_v1_5.new(self.priv_key)
-        self.verifier = PKCS1_v1_5.new(self.pub_key)
+        #self.verifier = PKCS1_v1_5.new(self.pub_key)
 
         self.rnd = Random.new()
 
@@ -56,9 +56,10 @@ class ServerIdentity(object):
 
     def verifySignature(self, signature, data, key=None):
         if key is None:
-            key = self.pub_key
+            key = selsf.pub_key
+        verifier = PKCS1_v1_5.new(key)
         hash = SHA256.new(data)
-        return self.verifier.verify(hash, signature)
+        return verifier.verify(hash, signature)
 
 # class TicketManager:
 # This class provides a facility generating and validating tickets which will be signed
@@ -82,7 +83,8 @@ class TicketManager(object):
         ticket = str(Random.get_random_bytes(64))
 #        pprint(ticket)
 #        print type(ticket)
-        enc_ticket = self.server.encryptData(ticket , self.server.pub_key)
+        cli_key = RSA.importKey(cli_key)
+        enc_ticket = self.server.encryptData(ticket , cli_key)
         timeout = reactor.callLater(TICKET_TIMEOUT * 60, removeTicket_cb, pboxid)
         self.active_tickets.update({pboxid: {'ticket': ticket,  'timeout': timeout}})
         return enc_ticket
@@ -123,12 +125,15 @@ class AccessCtrlHandler(object):
 
         def getTicket_cb(data):
             if not data:
-                reply_dict = { 'status': {'error': "Invalid Request", 'message': 'User does not exist.'} }
+                reply_dict = { 'status': {'error': "Invalid Request",
+                                          'message': 'User does not exist.'} }
             else:
                 pboxid = data[0][0]
                 pubkey = data[0][1]
+                print pubkey
                 # TODO: Use the provided key here.
-                ticket = self.ticket_manager.generateTicket(pboxid, self.server.pub_key)
+
+                ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
                 reply_dict = { 'status': "OK", 'ticket': str(ticket)}
 
             request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
@@ -149,19 +154,33 @@ class AccessCtrlHandler(object):
 
     # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
     def handleRegisterPBox(self, request):
-        pubkey = 0 # TODO: Use the provided key here.
         # Checking if the client exists.
-        def checkClientExists_cb(data):
+        #pprint(request.__dict__)
+        def checkClientExists_cb(data, key_txt):
             if data:
-                reply_dict = { 'status': {'error': "Invalid Request", 'message': 'User already exists.'} }
+                reply_dict = { 'status': {'error': "Invalid Request",
+                                          'message': 'User already exists.'} }
                 request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
                 request.finish()
             else:
-                d = self.storage.registerPBox(request,pubkey)
+                d = self.storage.registerPBox(request, key_txt)
                 return NOT_DONE_YET
 
+        # Validating key.
+        key_txt = request.content.read()
+        if not key_txt:
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "No key on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
+
+        if not cli_key.can_encrypt():
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "No key on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
         d = self.storage.getClientData(request)
-        d.addCallback(checkClientExists_cb)
+        d.addCallback(checkClientExists_cb, key_txt)
         return NOT_DONE_YET
         #return self.storage.registerPBox(request)
 
