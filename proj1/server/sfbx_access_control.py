@@ -1,4 +1,5 @@
-from twisted.internet import reactor
+from twisted.internet import defer, reactor
+from twisted.web.server import NOT_DONE_YET
 
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
@@ -104,7 +105,7 @@ class AccessCtrlHandler(object):
 
     def __init__(self, keys_dirname=0, password=0):
        self.server = ServerIdentity(keys_dirname, password)
-#       self.ticket_manager = TicketManager(self.server)
+       self.ticket_manager = TicketManager(self.server)
        self.storage = SafeBoxStorage()
 
     # Handling Session resource related operations:
@@ -113,15 +114,30 @@ class AccessCtrlHandler(object):
     def handleGetKey(self):
         key = self.server.pub_key.exportKey('PEM')
         print key
-        reply_dict = { 'status': "OK", 'list': key }
+        reply_dict = { 'status': "OK", 'key': key }
         return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
 
-    # def handleGetTicket(request):
-        
-    #     token = 
-    #     reply_dict = { 'status': "OK", 'ticket': ticket}
-    #     return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
-    #     return
+    # handleGetTicket: Checks if the userd ccid exists in the database,
+    # if it does returns a ticket.
+    def handleGetTicket(self, request):
+
+        def getTicket_cb(data):
+
+            print "HERE"
+            if not data:
+                reply_dict = { 'status': {'error': "Invalid Request", 'message': 'Client does not exist.'} }
+            else:
+                pboxid = data[0][0]
+                pubkey = data[0][1]
+                ticket = self.ticket_manager.generateTicket(pboxid, self.server.pub_key)
+                reply_dict = { 'status': "OK", 'ticket': str(ticket)}
+
+            request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
+            request.finish()
+
+        d = self.storage.getClientKey(request)
+        d.addCallback(getTicket_cb)
+        return NOT_DONE_YET
 
     # Handling PBoxes resource related operations:
     #
@@ -129,7 +145,7 @@ class AccessCtrlHandler(object):
     def handleListPBoxes(self, request):
         return self.storage.listPBoxes(request)
 
-    def handleGetPBoxMData(self, request):
+    def handleGetPBoxMData_(self, request):
         return self.storage.getPBoxMData(request)
 
     def handleRegisterPBox(self, request):

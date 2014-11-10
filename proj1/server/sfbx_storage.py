@@ -154,6 +154,7 @@ class SafeBoxStorage(object):
         return NOT_DONE_YET
 
 
+
     # registerPBox(): Inserts a new entry on PBox table.
     def registerPBox(self, request):
         ccid = str(request.args['ccid'])
@@ -180,6 +181,15 @@ class SafeBoxStorage(object):
             "INSERT INTO PBox (UserCCId, UserName, PubKey) VALUES (?, ?, ?) ", (ccid, name, pubkey));
         d.addCallback(registerPBox_cb)
         return NOT_DONE_YET
+
+    # getClientKey(): Retreives PBoxId and PubKey for internal usage.
+    def getClientKey(self, request):
+        ccid_str = str(request.args['ccid'])
+        ccid_str = strip_text(ccid_str)
+
+        d = self.dbpool.runQuery(
+            "SELECT PBoxId, PubKey FROM PBox WHERE UserCCId = ?", (ccid_str,))
+        return d
 
 # File related operations:
 #

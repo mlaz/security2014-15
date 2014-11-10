@@ -21,7 +21,7 @@ class Session(Resource):
     #
     # getticket: To get an access ticket.
     # 'method' = "getticket"
-    # 'usrccid' = <user's cc id number> #should we receive this encrypted
+    # 'ccid' = <user's cc id number> #should we receive this encrypted
     #
     # getkey: To get the server's public key.
     # 'method' = "getkey"
@@ -41,7 +41,7 @@ class Session(Resource):
                          'message': "Argument 'ccid' not provided."} }
             else:
                 print request.args['method']
-                return handler.handleListPBoxes()
+                return handler.handleGetTicket(request)
 
         # getkey:
         elif request.args['method'] == ['getkey']:
