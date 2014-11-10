@@ -16,151 +16,68 @@ import os
 import json
 
 from sfbx_client_cryptography import ClientIdentity
+from sfbx_client_protocols import *
 
-class FileDownload(Protocol):
-    def __init__(self, finished, cons):
-        self.finished = finished
-        self.cons = cons
-        
-    def dataReceived(self, data):
-        self.cons.write(data)
-        
-    def connectionMade(self):
-        self.cons.registerProducer(self, streaming=True)
-        
-    def connectionLost(self, reason):
-        self.cons.unregisterProducer()
-        print 'Finished receiving body:', reason.getErrorMessage()
-        self.finished.callback(None)
-
-class BeginningPrinter(Protocol):
-    def __init__(self, finished):
-        self.finished = finished
-        self.total_response = ""
-
-    def dataReceived(self, bytes):
-        self.total_response += bytes
-            
-    def connectionLost(self, reason):
-        print 'Response:\n', formatResponse(self.total_response)
-        print 'Finished receiving body: ', reason.getErrorMessage()
-
-class getKey(Protocol):
-    def __init__(self, finished):
-        self.finished = finished
-        self.total_response = ""
-
-    def dataReceived(self, bytes):
-        self.total_response += bytes
-
-    def connectionLost(self, reason):
-        print 'The key is:\n', formatKey(self.total_response)
-
-def formatKey(response):
-    response = json.loads(response, object_hook=_decode_dict)
-    if (response["status"] == ["error"]):
-        print(response["error"])
-    else:
-        print(response["key"])
-        
-class getTicket(Protocol):
-    def __init__(self, finished):
-        self.finished = finished
-        self.total_response = ""
-
-    def dataReceived(self, bytes):
-        self.total_response += bytes
-
-    def connectionLost(self, reason):
-        finalTicket = formatTicket(self.total_response)
-        self.finished.callback(finalTicket)
-
-def formatTicket(response):
-    response = json.loads(response, object_hook=_decode_dict)
-    if (response["status"] == ["error"]):
-        print(response["error"])
-    else:
-        s = response["ticket"]
-        print "Encrypted Ticket: ", s
-        cryTicket = cr_ticket(str(s))
-        print "Decrypted Ticket: ", cryTicket
-        return cryTicket
-
-def cr_ticket(ticket):
-    ci = ClientIdentity("rsakeys", "mypass")
-    dci = ci.decryptData(b64decode(ticket))
-    sci = ci.signData(dci)
-    eci = ci.encryptData(sci)
-    enc = b64encode(eci[0])
-    return enc
-        
-class getMData(Protocol):
-    def __init__(self, finished):
-        self.finished = finished
-        self.total_response = ""
-
-    def dataReceived(self, bytes):
-        self.total_response += bytes
-
-    def connectionLost(self, reason):
-        print 'User Data:\n', formatMData(self.total_response)
-
-def formatMData(response):
-    response = json.loads(response, object_hook=_decode_dict)
-    if (response["status"] == ["error"]):
-        print(response["error"])
-    else:
-        s = response["data"]
-        #s = s.strip("(")
-        #s = s.strip(")")
-        #s = s.strip(",")
-        #s = s.strip('"')
-        print s
-
-def formatResponse(response):
-    response = json.dumps(response)
-    pprint(response)
-    response = json.loads(response, object_hook=_decode_dict)
-    if (response["status"] == ["error"]):
-        print(response["error"])
-    else:
-        for elem in response["list"].keys():
-            for attr in response["list"].get(elem):
-                print attr, ": ", response["list"].get(elem).get(attr)
-                
-def _decode_list(data):
-    rv = []
-    for item in data:
-        if isinstance(item, unicode):
-            item = item.encode('utf-8')
-        elif isinstance(item, list):
-            item = _decode_list(item)
-        elif isinstance(item, dict):
-            item = _decode_dict(item)
-        rv.append(item)
-    return rv
-
-def _decode_dict(data):
-    rv = {}
-    for key, value in data.iteritems():
-        if isinstance(key, unicode):
-            key = key.encode('utf-8')
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-        elif isinstance(value, list):
-            value = _decode_list(value)
-        elif isinstance(value, dict):
-            value = _decode_dict(value)
-        rv[key] = value
-    return rv
-
-def handle_result(response):
-    print " "
-
+#
 class SafeBoxClient():
     def __init__(self):
         self.server = "localhost:8000"
+        self.client_id = self.ccid = self.passwd = None
 
+    #
+    def startClientId(self, key):
+        self.client_id = ClientId(self.ccid, self.passwd, key)
+
+    def handleGetKey(self):
+        def handleGetKey_cb(response):
+            print 'Response version:', response.version
+            print 'Response code:', response.code
+            print 'Response phrase:', response.phrase
+            print 'Response headers:'
+            print pformat(list(response.headers.getAllRawHeaders()))
+            defer = Deferred()
+            defer.addCallback(self.startClientId)
+            response.deliverBody(getKey(defer))
+            return NOT_DONE_YET
+
+        agent = Agent(reactor)
+        d = agent.request(
+                    'GET',
+                    'http://localhost:8000/session/?method=getkey',
+                    Headers({'User-Agent': ['Twisted Web Client Example'],
+                    'Content-Type': ['text/x-greeting']}),
+                    None)
+
+        d.addCallback(handleGetKey_cb)
+
+        return NOT_DONE_YET
+  
+    #
+    def handleGetTicket(self, method):
+        def handleGetTicket_cb(response):
+            print 'Response version: ', response.version
+            print 'Response code: ', response.code
+            print 'Response phrase: ', response.phrase
+            print 'Response headers: '
+            print pformat(list(response.headers.getAllRawHeaders()))
+            defer = Deferred()
+            defer.addCallback(method)
+            response.deliverBody(getTicket(defer, self.client_id))
+            return NOT_DONE_YET
+
+        agent = Agent(reactor)
+        d = agent.request(
+                'GET',
+                'http://localhost:8000/session/?method=getticket&ccid=678909876',
+                Headers({'User-Agent': ['Twisted Web Client Example'],
+                'Content-Type': ['text/x-greeting']}),
+                None)
+
+        d.addCallback(handleGetTicket_cb)
+
+        return NOT_DONE_YET
+
+    #
     def handleList(self, line):
         def handleList_cb(response):
             print 'Response version:', response.version
@@ -171,7 +88,7 @@ class SafeBoxClient():
             defer = Deferred()
             response.deliverBody(BeginningPrinter(defer))
             return NOT_DONE_YET
-        
+
         def handleListPboxes(signedTicket):
             agent = Agent(reactor)
 	    body = FileBodyProducer(StringIO(signedTicket))
@@ -183,7 +100,7 @@ class SafeBoxClient():
                     body)
             d.addCallback(handleList_cb)
             return NOT_DONE_YET
-        
+
         def handleListFiles(signedTicket):
             agent = Agent(reactor)
             body = FileBodyProducer(StringIO(signedTicket))
@@ -259,7 +176,7 @@ class SafeBoxClient():
     def handleRegister(self, line):
         def handleRegister_cb(response):
             return NOT_DONE_YET
-        
+
         agent = Agent(reactor)
         s = line.split()
         if len(s) != 4:
@@ -292,7 +209,7 @@ class SafeBoxClient():
 
             d.addCallback(handleRegister_cb)
             return NOT_DONE_YET
-    
+
     def handleLogin(self, line):
         s = line.split()
         if len(s) != 3:
@@ -305,54 +222,7 @@ class SafeBoxClient():
 
             return "sucess"
 
-        #TODO        
-
-    def handleGetKey(self):
-        def handleGetKey_cb(response):
-            print 'Response version:', response.version
-            print 'Response code:', response.code
-            print 'Response phrase:', response.phrase
-            print 'Response headers:'
-            print pformat(list(response.headers.getAllRawHeaders()))
-            defer = Deferred()
-            response.deliverBody(getKey(defer))
-            return NOT_DONE_YET
-
-        agent = Agent(reactor)
-        d = agent.request(
-                    'GET',
-                    'http://localhost:8000/session/?method=getkey',
-                    Headers({'User-Agent': ['Twisted Web Client Example'],
-                    'Content-Type': ['text/x-greeting']}),
-                    None)
-
-        d.addCallback(handleGetKey_cb)
-
-        return NOT_DONE_YET
-
-    def handleGetTicket(self, method):
-        def handleGetTicket_cb(response):
-            print 'Response version: ', response.version
-            print 'Response code: ', response.code
-            print 'Response phrase: ', response.phrase
-            print 'Response headers: '
-            print pformat(list(response.headers.getAllRawHeaders()))
-            defer = Deferred()
-            defer.addCallback(method)
-            response.deliverBody(getTicket(defer))
-            return NOT_DONE_YET
-
-        agent = Agent(reactor)
-        d = agent.request(
-                'GET',
-                'http://localhost:8000/session/?method=getticket&ccid=678909876',
-                Headers({'User-Agent': ['Twisted Web Client Example'],
-                'Content-Type': ['text/x-greeting']}),
-                None)
-
-        d.addCallback(handleGetTicket_cb)
-
-        return NOT_DONE_YET
+        #TODO
 
     def handleGetMData(self):
         def handleGetMData_cb(response):
@@ -376,3 +246,44 @@ class SafeBoxClient():
         d.addCallback(handleGetMData_cb)
 
         return NOT_DONE_YET
+
+### Helper functions:
+    def formatResponse(response):
+        response = json.dumps(response)
+        pprint(response)
+        response = json.loads(response, object_hook=_decode_dict)
+        if (response["status"] == ["error"]):
+            print(response["error"])
+        else:
+            for elem in response["list"].keys():
+                for attr in response["list"].get(elem):
+                    print attr, ": ", response["list"].get(elem).get(attr)
+
+    def _decode_list(data):
+        rv = []
+        for item in data:
+            if isinstance(item, unicode):
+                item = item.encode('utf-8')
+            elif isinstance(item, list):
+                item = _decode_list(item)
+            elif isinstance(item, dict):
+                item = _decode_dict(item)
+                rv.append(item)
+        return rv
+
+    def _decode_dict(data):
+        rv = {}
+        for key, value in data.iteritems():
+            if isinstance(key, unicode):
+                key = key.encode('utf-8')
+            if isinstance(value, unicode):
+                value = value.encode('utf-8')
+            elif isinstance(value, list):
+                value = _decode_list(value)
+            elif isinstance(value, dict):
+                value = _decode_dict(value)
+            rv[key] = value
+        return rv
+
+    def handle_result(response):
+        print " "
