@@ -3,6 +3,7 @@ from Crypto import Random
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
+from base64 import b64encode, b64decode
 
 if __name__ == "__main__":
 
@@ -35,18 +36,25 @@ if __name__ == "__main__":
     print "Testing TicketManager: "
 
     tm = TicketManager(sid)
-    t1 = tm.generateTicket(1, sid.pub_key)
+    t1 = tm.generateTicket(1, sid.pub_key.exportKey('PEM'))
     print type(t1)
     print t1
-    t1 = sid.decryptData(t1)
+#    print len(str(b64encode(t1[0])))
+#    t1 = str(b64encode(t1[0]))
 
-    hash = SHA256.new(t1)
+#client
+    dec_t1 = sid.decryptData(b64decode(str(t1)))
+    hash = SHA256.new(dec_t1)
     signer = PKCS1_v1_5.new(sid.priv_key)
     sig1 = signer.sign(hash)
     sig1_enc = sid.encryptData(sig1)
+    sig1_enc = b64encode(sig1_enc[0])
 
-    if tm.validateTicket(sig1_enc, 1, sid.pub_key):
+#/client
+#server
+    if tm.validateTicket(str(sig1_enc), 1, sid.pub_key):
         print "OK"
+
 
     print "Testing AccessCtrlHandler: "
 

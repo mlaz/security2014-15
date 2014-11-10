@@ -6,9 +6,11 @@ from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 from Crypto import Random
 
-from base64 import b64encode, b64decode
+#from base64 import b64encode, b64decode
 from pprint import pprint
+from base64 import b64encode, b64decode
 import json
+
 from  sfbx_storage import SafeBoxStorage, strip_text
 
 TICKET_TIMEOUT = 3
@@ -56,7 +58,7 @@ class ServerIdentity(object):
 
     def verifySignature(self, signature, data, key=None):
         if key is None:
-            key = selsf.pub_key
+            key = self.pub_key
         verifier = PKCS1_v1_5.new(key)
         hash = SHA256.new(data)
         return verifier.verify(hash, signature)
@@ -71,7 +73,7 @@ class TicketManager(object):
         self.server = identity
         self.active_tickets = {}
 
-    #generateTicket:
+    #generateTicket: returns base64 encoded ticket
     def generateTicket(self, pboxid, cli_key):
         def removeTicket_cb(pboxid):
             del self.active_tickets[pboxid]
@@ -87,17 +89,17 @@ class TicketManager(object):
         enc_ticket = self.server.encryptData(ticket , cli_key)
         timeout = reactor.callLater(TICKET_TIMEOUT * 60, removeTicket_cb, pboxid)
         self.active_tickets.update({pboxid: {'ticket': ticket,  'timeout': timeout}})
-        return enc_ticket
+        return b64encode(enc_ticket[0])
 
-    #validateTicket:
-    def validateTicket(self, signature, pboxid, cli_key):
+    #validateTicket: ticket must be base64 encoded
+    def validateTicket(self,signature, pboxid, cli_key):
         if pboxid in self.active_tickets.keys():
             self.active_tickets[pboxid]['timeout'].cancel()
-            ticket = self.active_tickets[pboxid]['ticket']
+            original = self.active_tickets[pboxid]['ticket']
             del self.active_tickets[pboxid]
 
-        signature = self.server.decryptData(signature)
-        return self.server.verifySignature(signature, ticket, cli_key)
+        signature = self.server.decryptData(b64decode(signature))
+        return self.server.verifySignature(signature, original, cli_key)
 
 
 # class AccessCtrlHandler:
@@ -134,7 +136,7 @@ class AccessCtrlHandler(object):
                 # TODO: Use the provided key here.
 
                 ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
-                reply_dict = { 'status': "OK", 'ticket': str(ticket)}
+                reply_dict = { 'status': "OK", 'ticket': ticket}
 
             request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
             request.finish()
@@ -147,8 +149,25 @@ class AccessCtrlHandler(object):
     #
 
     def handleListPBoxes(self, request):
-        return self.storage.listPBoxes(request)
+        #pprint(request.__dict__)
 
+        # # Validating ticket.
+        # ticket = request.content.read()
+        # if not ticket:
+        #     reply_dict = { 'status': {'error': "Invalid Request",
+        #                               'message': "No ticket on request body."} }
+        #     return json.dumps(reply_dict, encoding="utf-8")
+
+        # # if not cli_key.can_encrypt():
+        # #     reply_dict = { 'status': {'error': "Invalid Request",
+        # #                               'message': "No key on request body."} }
+        # #     return json.dumps(reply_dict, encoding="utf-8")
+
+        # if self.ticket_manager.validateTicket(ticket, )
+        # d = self.storage.getClientData(request)
+        # d.addCallback(checkClientExists_cb, key_txt)
+        # return NOT_DONE_YET
+        return
     def handleGetPBoxMData(self, request):
         return self.storage.getPBoxMData(request)
 
@@ -182,11 +201,9 @@ class AccessCtrlHandler(object):
         d = self.storage.getClientData(request)
         d.addCallback(checkClientExists_cb, key_txt)
         return NOT_DONE_YET
-        #return self.storage.registerPBox(request)
-
+        
     # Handling Files resource related operations:
     #
-
     def handleListFiles(self, request):
         return self.storage.listFiles(request)
 
