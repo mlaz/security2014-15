@@ -37,7 +37,7 @@ class Session(Resource):
         # getticket:
         if request.args['method'] == ['getticket']:
             if 'ccid' not in request.args.keys():
-                error = { 'status': {'error': "Invalid Request",
+                error = { 'status': {'error': "Invlid Request",
                          'message': "Argument 'ccid' not provided."} }
             else:
                 print request.args['method']

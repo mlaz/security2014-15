@@ -122,20 +122,19 @@ class AccessCtrlHandler(object):
     def handleGetTicket(self, request):
 
         def getTicket_cb(data):
-
-            print "HERE"
             if not data:
-                reply_dict = { 'status': {'error': "Invalid Request", 'message': 'Client does not exist.'} }
+                reply_dict = { 'status': {'error': "Invalid Request", 'message': 'User does not exist.'} }
             else:
                 pboxid = data[0][0]
                 pubkey = data[0][1]
+                # TODO: Use the provided key here.
                 ticket = self.ticket_manager.generateTicket(pboxid, self.server.pub_key)
                 reply_dict = { 'status': "OK", 'ticket': str(ticket)}
 
             request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
             request.finish()
 
-        d = self.storage.getClientKey(request)
+        d = self.storage.getClientData(request)
         d.addCallback(getTicket_cb)
         return NOT_DONE_YET
 
@@ -145,11 +144,26 @@ class AccessCtrlHandler(object):
     def handleListPBoxes(self, request):
         return self.storage.listPBoxes(request)
 
-    def handleGetPBoxMData_(self, request):
+    def handleGetPBoxMData(self, request):
         return self.storage.getPBoxMData(request)
 
+    # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
     def handleRegisterPBox(self, request):
-        return self.storage.registerPBox(request)
+        pubkey = 0 # TODO: Use the provided key here.
+        # Checking if the client exists.
+        def checkClientExists_cb(data):
+            if data:
+                reply_dict = { 'status': {'error': "Invalid Request", 'message': 'User already exists.'} }
+                request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
+                request.finish()
+            else:
+                d = self.storage.registerPBox(request,pubkey)
+                return NOT_DONE_YET
+
+        d = self.storage.getClientData(request)
+        d.addCallback(checkClientExists_cb)
+        return NOT_DONE_YET
+        #return self.storage.registerPBox(request)
 
     # Handling Files resource related operations:
     #
