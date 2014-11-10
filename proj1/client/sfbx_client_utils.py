@@ -91,7 +91,8 @@ def cr_ticket(ticket):
     dci = ci.decryptData(b64decode(ticket))
     sci = ci.signData(dci)
     eci = ci.encryptData(sci)
-    return eci
+    enc = b64encode(eci[0])
+    return enc
         
 class getMData(Protocol):
     def __init__(self, finished):
