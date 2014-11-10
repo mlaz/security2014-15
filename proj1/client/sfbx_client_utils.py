@@ -1,14 +1,20 @@
 from twisted.internet import reactor
 from twisted.web.client import Agent, FileBodyProducer
 from twisted.web.http_headers import Headers
+from twisted.internet import abstract
 from twisted.web.server import NOT_DONE_YET
+from twisted.web import iweb
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.protocols.ftp import FileConsumer
 from StringIO import StringIO
 from pprint import pformat
 from pprint import pprint
+from zope import interface
+import os
 import json
+
+from sfbx_client_cryptography import ClientIdentity
 
 class FileDownload(Protocol):
     def __init__(self, finished, cons):
@@ -173,7 +179,6 @@ class SafeBoxClient():
 
     def handleRegister(self, line):
         def handleRegister_cb(response):
-
             return NOT_DONE_YET
         
         agent = Agent(reactor)
@@ -181,21 +186,35 @@ class SafeBoxClient():
         username = s[1]
         ccnumber = s[2]
         password = s[3]
+
+        #if not os.path.exists(username):
+        #    os.makedirs(username)
+        #fn = username + "/private.pem"
+        #if not os.path.exists(fn):
+        #    open(fn, 'w').close()
+        #fn = username + "/public.pem"
+        #if not os.path.exists(fn):
+        #    open(fn, 'w').close()
+
+        ci = ClientIdentity("rsakeys", password)
+
+        body = FileBodyProducer(StringIO(ci.pub_key.exportKey('PEM')))
         d = agent.request(
                     'PUT',
-                    'http://localhost:8000/pboxes/?method=register&ccid='+ ccnumber +'&name=' + username + '&pubkey=' + password,
+                    'http://localhost:8000/pboxes/?method=register&ccid='+ ccnumber +'&name=' + username,
                     Headers({'User-Agent': ['Twisted Web Client Example'],
                     'Content-Type': ['text/x-greeting']}),
-                    None)
+                    body)
 
         d.addCallback(handleRegister_cb)
         return NOT_DONE_YET
     
     def handleLogin(self, line):
         s = line.split()
-        if not s[1]:
-            return "Erro"
-        return "Sucesso"
+        username = s[1]
+        password = s[2]
+
+        #TODO        
 
     def handleGetKey(self):
         def handleGetKey_cb(response):
