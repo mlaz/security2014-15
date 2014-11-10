@@ -133,7 +133,6 @@ class AccessCtrlHandler(object):
                 pboxid = data[0][0]
                 pubkey = data[0][1]
                 print pubkey
-                # TODO: Use the provided key here.
 
                 ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
                 reply_dict = { 'status': "OK", 'ticket': ticket}
@@ -145,36 +144,63 @@ class AccessCtrlHandler(object):
         d.addCallback(getTicket_cb)
         return NOT_DONE_YET
 
+    def handleValidation(self, request, method):
+
+        ticket = request.content.read()
+        if not ticket:
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "No ticket on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
+
+        def handleValidation_cb(data):
+            if not data:
+                reply_dict = { 'status': {'error': "Invalid Request",
+                                          'message': 'User does not exist.'} }
+
+            else:
+                pboxid = data[0][0]
+                pubkey = data[0][1]
+                print pubkey
+
+                if self.ticket_manager.validateTicket(ticket, pboxid, pubkey):
+                    d = method(request)
+                    return NOT_DONE_YET
+
+                else:
+                    reply_dict = { 'status': {'error': "Invalid Ticket",
+                                          'message': 'N/A'} }
+
+            request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
+            request.finish()
+
+        d = self.storage.getClientData(request)
+        d.addCallback(handleValidation_cb)
+        return NOT_DONE_YET
+
     # Handling PBoxes resource related operations:
     #
 
     def handleListPBoxes(self, request):
         #pprint(request.__dict__)
 
-        # # Validating ticket.
+        # TODO: evaluate if this code should be moved to handleValidation
+        # Checking if ticket exists.
         # ticket = request.content.read()
         # if not ticket:
         #     reply_dict = { 'status': {'error': "Invalid Request",
         #                               'message': "No ticket on request body."} }
         #     return json.dumps(reply_dict, encoding="utf-8")
 
-        # # if not cli_key.can_encrypt():
-        # #     reply_dict = { 'status': {'error': "Invalid Request",
-        # #                               'message': "No key on request body."} }
-        # #     return json.dumps(reply_dict, encoding="utf-8")
+        return self.handleValidation(request, self.storage.listPBoxes)
 
-        # if self.ticket_manager.validateTicket(ticket, )
-        # d = self.storage.getClientData(request)
-        # d.addCallback(checkClientExists_cb, key_txt)
-        # return NOT_DONE_YET
-        return
     def handleGetPBoxMData(self, request):
         return self.storage.getPBoxMData(request)
 
     # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
     def handleRegisterPBox(self, request):
         # Checking if the client exists.
-        #pprint(request.__dict__)
+        # pprint(request.__dict__)
         def checkClientExists_cb(data, key_txt):
             if data:
                 reply_dict = { 'status': {'error': "Invalid Request",
@@ -201,11 +227,12 @@ class AccessCtrlHandler(object):
         d = self.storage.getClientData(request)
         d.addCallback(checkClientExists_cb, key_txt)
         return NOT_DONE_YET
-        
+
     # Handling Files resource related operations:
     #
     def handleListFiles(self, request):
-        return self.storage.listFiles(request)
+        
+        return handleValidation(request, self.storage.listFiles)
 
     def handleGetFile(self, request):
         return self.storage.getFile(request)
