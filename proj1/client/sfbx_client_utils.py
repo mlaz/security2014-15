@@ -7,6 +7,7 @@ from twisted.web import iweb, http_headers
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.protocols.ftp import FileConsumer
+from sfbx_client_protocols import FileDownload
 from base64 import b64encode, b64decode
 from StringIO import StringIO
 from pprint import pformat
@@ -181,18 +182,44 @@ class SafeBoxClient():
             if s[1].lower() == "pboxinfo":
                 return self.handleGetMData(printResult_cb, ticket, s[2].lower())
 
+        def handleGetFile(signedTicket):
+            def handleGetFile_cb(response, f):
+                finished = Deferred()
+                cons = FileConsumer(f)
+                response.deliverBody(FileDownload(finished, cons))
+                return finished
+
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(signedTicket))
+            d = agent.request(
+                    'GET',
+                    'http://localhost:8000/files/?method=getfile&ccid=' + self.ccid + '&fileid=' + fileId,
+                    Headers({'User-Agent': ['Twisted Web Client Example'],
+                             'Content-Type': ['text/x-greeting']}),
+                    body)
+            f = open(fileId, "w")
+            d.addCallback(handleGetFile_cb, f)
+            return NOT_DONE_YET
+
         s = line.split()
-        if len(s) == 3:
+        if len(s) == 2:
             if s[1].lower() == "pboxinfo":
                 return self.handleGetTicket(handleGet_cb)
-            # elif s[1].lower() == "files":
-	    #     return self.handleGetTicket(handleListFiles)
+            elif s[1].lower() == "files":
+	        return self.handleGetTicket(handleListFiles)
 	    else:
 		print "Error: invalid arguments!\n"
 		print "Correct usage: get <pboxinfo|file>"
+        elif len(s) == 3:
+            if s[1].lower() == "file":
+                fileId = s[2]
+                return self.handleGetTicket(handleGetFile)
+            else:
+                print "Error: invalid arguments!\n"
+                print "Correct usage: get file <fileId>"
         else:
 	    print "Error: invalid arguments!\n"
-            print "Correct usage: list <pboxes|files>"
+            print "Correct usage: list <pboxes|files> or list file <fileId>"
 
 
     # handleGetMData: Handles get pbox metadata operations.
