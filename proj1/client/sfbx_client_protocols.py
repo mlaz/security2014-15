@@ -72,7 +72,7 @@ class getKey(Protocol):
             return (response["key"])
 
 class getMData(Protocol):
-    def __init__(self, finished):
+    def __init__(self, finished, method=None):
         self.finished = finished
         self.total_response = ""
 
@@ -80,19 +80,19 @@ class getMData(Protocol):
         self.total_response += bytes
 
     def connectionLost(self, reason):
-        print 'User Data:\n', formatMData(self.total_response)
+        self.finished.callback(self.formatMData(self.total_response))
 
-    def formatMData(response):
+    def formatMData(self, response):
         response = json.loads(response)
-        response = json.loads(response, object_hook=decode_dict)
-        if (response["status"] == ["error"]):
-            print(response["error"])
+        #print response
+#        response = json.loads(response, object_hook=decode_dict)
+        if (response["status"] != "OK"):
+            data = response["status"]["message"]
+
         else:
-            s = response["data"]
-            #s = s.strip("(")
-            #s = s.strip(")")
-            #s = s.strip(",")
-            #s = s.strip('"')
-            print s
-
-
+            data = response["data"]
+            # data = data.strip("(")
+            # data = data.strip(")")
+            # data = data.strip(",")
+            # data = data.strip('"')
+        return data

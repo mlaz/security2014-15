@@ -14,6 +14,8 @@ import json
 from  sfbx_storage import SafeBoxStorage, strip_text
 
 TICKET_TIMEOUT = 3
+TICKET_SIZE = 172 # size of signed ticket
+
 
 #
 # SafeBox server access control utilities API:
@@ -153,7 +155,7 @@ class AccessCtrlHandler(object):
         # ticket will only exist from arguments when this method
         # is being called to validate data transfer operations
         if not ticket:
-            ticket = request.content.read()
+            ticket = request.content.read(TICKET_SIZE)
             if not ticket:
                 reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No ticket on request body."} }
@@ -197,8 +199,8 @@ class AccessCtrlHandler(object):
         return self.handleValidation(request, self.storage.listPBoxes)
 
     def handleGetPBoxMData(self, request):
-        return self.storage.getPBoxMData(request)
-        return self.handleValidation(request, self.storage.listFiles)
+#        return self.storage.getPBoxMData(request, None)
+        return self.handleValidation(request, self.storage.getPBoxMData)
 
     # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
     def handleRegisterPBox(self, request):

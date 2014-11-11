@@ -138,13 +138,15 @@ class SafeBoxStorage(object):
     # getPBoxMData(): Queries the data base for all entries on all
     # PBox's attributes for given ccid.
     def getPBoxMData(self, request, ignore):
-        ccid_str = str(request.args['ccid'])
+        ccid_str = str(request.args['tgtccid'])
         ccid_str = strip_text(ccid_str)
 
 
         # getPBoxMData_cb(): Callback for getPBoxMData(), Processes retrieved data for reply.
         def getPBoxMData_cb (data):
             reply_dict = {}
+            if len(data) == 0:
+                reply_dict = { 'status': {'error': "Invalid Input", 'message': "User doesn't exist."} }
 
             for row in data:
                 row_dict = {
@@ -276,8 +278,6 @@ class SafeBoxStorage(object):
         #  if anything goes wrong at this point
         # This method should start writing the file to the disk.
         def writeFile_cb(data):
-            # pboxid = str(request.args['pboxid'])
-            # pboxid = strip_text(pboxid)
             # path = <OwnerPBoxId>/<FileId>
             file = open(pboxid + "/" + str(data[0][0]) ,"w")
             prod = FD2FileProducer(request)
@@ -290,8 +290,6 @@ class SafeBoxStorage(object):
 
         # This query should retreive the highest file number for a given pboxid
         def getFilePath_cb(data):
-            # pboxid = str(request.args['pboxid'])
-            # pboxid = strip_text(pboxid)
             d = self.dbpool.runQuery(
                 "SELECT FileId " +
                 "FROM File " +
@@ -302,19 +300,16 @@ class SafeBoxStorage(object):
 
             return NOT_DONE_YET
 
-        # pboxid now from handleValidation
-        # pboxid = str(request.args['pboxid'])
-        # pboxid = strip_text(pboxid)
         filename = str(request.args['name'])
         filename = strip_text(filename)
-        iv = str(request.args['iv'])
-        iv = strip_text(iv)
-        symkey = str(request.args['key'])
-        symkey = strip_text(symkey)
+        # iv = str(request.args['iv'])
+        # iv = strip_text(iv)
+        # symkey = str(request.args['key'])
+        # symkey = strip_text(symkey)
 
         d = self.dbpool.runQuery(
             "INSERT INTO File (OwnerPBoxId, FileName, IV, SymKey) VALUES (?, ?, ?, ?);",
-            (pboxid, filename, iv, symkey));
+            (pboxid, filename, "IV HERE", "KEY HERE"));
         d.addCallback(getFilePath_cb)
 
         return NOT_DONE_YET

@@ -71,6 +71,7 @@ class PBoxes(Resource):
     # get_mdata: To a pbox's metadata.
     # 'method' = "get_mdata"
     # 'ccid' = <user's cc id number>
+    # 'tgtccid' = <queried user's cc id number>
     def render_GET(self, request):
 
         error = None;
@@ -98,8 +99,12 @@ class PBoxes(Resource):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'ccid' not provided."} }
 
+            if ('tgtccid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'tgtccid' not specified."} }
+
             else:
-                print request.args['ccid']
+                print request.args['tgtccid']
                 return handler.handleGetPBoxMData(request)
 
 
@@ -261,8 +266,8 @@ class Files(Resource):
     # 'method' = "putfile"
     # 'ccid' = <user's ccid>
     # 'name' = <file name>
-    # 'iv' = <iv used to encrypt the file>
-    # 'key' = <symmetric key used to encrypt the file>
+    # 'iv' = <iv used to encrypt the file> # inside body
+    # 'key' = <symmetric key used to encrypt the file> # inside body
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
@@ -280,13 +285,13 @@ class Files(Resource):
                 error = { 'status': {'error': "Invalid Request",
                           'message': "Argument 'name' not specified."} }
 
-            if ('iv' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                          'message': "Argument 'iv' not specified."} }
+            # if ('iv' not in request.args.keys()) & (error == None):
+            #     error = { 'status': {'error': "Invalid Request",
+            #               'message': "Argument 'iv' not specified."} }
 
-            if ('key' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                          'message': "Argument 'key' not specified."} }
+            # if ('key' not in request.args.keys()) & (error == None):
+            #     error = { 'status': {'error': "Invalid Request",
+            #               'message': "Argument 'key' not specified."} }
 
             print request.args['method']
             if error is None:

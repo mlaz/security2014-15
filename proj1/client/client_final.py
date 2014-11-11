@@ -42,6 +42,7 @@ class CommandReceiver(basic.LineReceiver):
         elif method == "help":
                  self.transport.write("\nThe availabe commands are:\nlist pboxes"
                                       + "\nlist files\nget file <fileId>\nupdate file <fileId>\n"
+                                      + "\nget pboxinfo <ccid>\n"
                                       + "delete file <fileId>\nshare file <fileId> <destinationPBoxId>\nquit\n")
         elif (method == "quit") or (method == "exit"):
             reactor.stop()
