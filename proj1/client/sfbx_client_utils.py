@@ -76,7 +76,6 @@ class SafeBoxClient():
         d.addCallback(handleGetTicket_cb)
 
         return NOT_DONE_YET
-
     #
     def handleList(self, line):
         def handleList_cb(response):
