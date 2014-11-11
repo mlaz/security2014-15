@@ -1,3 +1,4 @@
+from twisted.internet.protocol import Protocol
 from twisted.internet import defer, reactor
 from twisted.web.server import NOT_DONE_YET
 
@@ -8,7 +9,9 @@ from Crypto import Random
 
 from base64 import b64encode, b64decode
 from pprint import pprint
+import json
 
+from sfbx_decode_utils import DecodeUtils
 
 #
 # SafeBox client crypography utilities API:
@@ -72,23 +75,30 @@ class getTicket(Protocol):
         self.total_response += bytes
 
     def connectionLost(self, reason):
-        finalTicket = formatTicket(self.total_response)
+        finalTicket = self.formatTicket(self.total_response)
         self.finished.callback(finalTicket)
-
-    def formatTicket(response):
-        response = json.loads(response, object_hook=_decode_dict)
+        
+    def formatTicket(self, response):
+        response = json.loads(response)
+        #response = json.loads(response, object_hook=du.decode_dict)
+        #print self.total_response
+        #print response
         if (response["status"] == ["error"]):
             print(response["error"])
         else:
             s = response["ticket"]
-            print "Encrypted Ticket: ", s
-            cryTicket = cr_ticket(str(s))
-            print "Decrypted Ticket: ", cryTicket
+            #print "Encrypted Ticket: ", s
+            cryTicket = self.cr_ticket(str(s))
+            #print "Decrypted Ticket: ", cryTicket
             return cryTicket
 
-    def cr_ticket(ticket):
+    def cr_ticket(self, ticket):
+        print "server's ticket: ", ticket
         dci = self.ci.decryptData(b64decode(ticket))
         sci = self.ci.signData(dci)
         eci = self.ci.encryptData(sci)
-        enc = self.b64encode(eci[0])
+        enc = b64encode(eci[0])
+        print "signed and encoded ticket: ", enc
         return enc
+
+du = DecodeUtils()

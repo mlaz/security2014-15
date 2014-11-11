@@ -7,7 +7,7 @@ class Echo(basic.LineReceiver):
     control = 0
 
     def connectionMade(self):
-        self.transport.write("Welcome to SafeBox command application.\nType 'register <UserName> <ccNumber> <password>' or 'login <UserName> <password>' to start using the application\n")
+        self.transport.write("Welcome to SafeBox command application.\nType 'register <UserName> <ccNumber> <password>' or 'login <CCnumber> <password>' to start using the application\n\nFOR TEST PURPOSES: login 678909876 mypass\n\n")
 
     def lineReceived(self, line):
         if not line: return
