@@ -20,7 +20,7 @@ class CommandReceiver(basic.LineReceiver):
         s = line.split()
         method = s[0].lower()
 
-        # if state = 
+        # if state =
 
         if method == "list":
             return client.handleList(line)
@@ -53,13 +53,19 @@ class CommandReceiver(basic.LineReceiver):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        sys.exit('Usage: %s <userccid>' % sys.argv[0])
+        sys.exit('Usage: %s <userccid> <password> <name(optional)>' % sys.argv[0])
 
     # dirname for the .pem files = user ccid
     if not os.path.exists(sys.argv[1]):
         sys.exit('ERROR: Directiry %s not found!' % sys.argv[1])
 
+    if len(sys.argv) > 3:
+        uname = argv[3]
+    else:
+        uname = ""
+
     client =  SafeBoxClient()
     stdio.StandardIO(CommandReceiver())
-    reactor.callLater(0, client.startClient, sys.argv[1], sys.argv[2])
+
+    reactor.callLater(0, client.startClient, sys.argv[1], sys.argv[2], uname)
     reactor.run()

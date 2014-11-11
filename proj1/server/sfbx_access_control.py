@@ -198,6 +198,7 @@ class AccessCtrlHandler(object):
 
     def handleGetPBoxMData(self, request):
         return self.storage.getPBoxMData(request)
+        return self.handleValidation(request, self.storage.listFiles)
 
     # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
     def handleRegisterPBox(self, request):
@@ -233,19 +234,19 @@ class AccessCtrlHandler(object):
     # Handling Files resource related operations:
     #
     def handleListFiles(self, request):
-        return handleValidation(request, self.storage.listFiles)
+        return self.handleValidation(request, self.storage.listFiles)
 
     def handleGetFile(self, request):
-        return handleValidation(request, self.storage.getFile)
+        return self.handleValidation(request, self.storage.getFile)
 
     def handlePutFile(self, request):#
-        return handleValidation(request, self.storage.putFile)
+        return self.handleValidation(request, self.storage.putFile)
 
     def handleUpdateFile(self, request):#
-        return handleValidation(request, self.storage.updateFile)
+        return self.handleValidation(request, self.storage.updateFile)
 
     def handleDeleteFile(self, request):
-        return handleValidation(request, self.storage.deleteFile)
+        return self.handleValidation(request, self.storage.deleteFile)
 
     # Handling Share resource related operations:
     #

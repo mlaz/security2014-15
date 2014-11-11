@@ -11,7 +11,7 @@ from base64 import b64encode, b64decode
 from pprint import pprint
 import json
 
-from sfbx_decode_utils import DecodeUtils
+from sfbx_decode_utils import *
 
 #
 # SafeBox client crypography utilities API:
@@ -77,22 +77,22 @@ class getTicket(Protocol):
     def connectionLost(self, reason):
         finalTicket = self.formatTicket(self.total_response)
         self.finished.callback(finalTicket)
-        
+
     def formatTicket(self, response):
+
         response = json.loads(response)
-        #response = json.loads(response, object_hook=du.decode_dict)
-        #print self.total_response
-        #print response
-        if (response["status"] == ["error"]):
-            print(response["error"])
+
+        if response["status"] != "OK" :
+            print(response["status"]["error"])
+            return None
         else:
             s = response["ticket"]
             #print "Encrypted Ticket: ", s
-            cryTicket = self.cr_ticket(str(s))
+            cryTicket = self.process_ticket(str(s))
             #print "Decrypted Ticket: ", cryTicket
             return cryTicket
 
-    def cr_ticket(self, ticket):
+    def process_ticket(self, ticket):
         print "server's ticket: ", ticket
         dci = self.ci.decryptData(b64decode(ticket))
         sci = self.ci.signData(dci)
@@ -101,4 +101,4 @@ class getTicket(Protocol):
         print "signed and encoded ticket: ", enc
         return enc
 
-du = DecodeUtils()
+

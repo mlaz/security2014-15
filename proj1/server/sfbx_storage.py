@@ -101,7 +101,7 @@ class SafeBoxStorage(object):
 # PBox related operations:
 #
 
-    # getClientKey(): Retreives PBoxId and PubKey for internal usage.
+    # getClientData(): Retreives PBoxId and PubKey for internal usage.
     def getClientData(self, request):
         ccid_str = str(request.args['ccid'])
         ccid_str = strip_text(ccid_str)
@@ -120,7 +120,7 @@ class SafeBoxStorage(object):
             tsize = 0
             for row in data:
                 row_dict = {
-                    'PBoxId': row[0],
+                   # 'PBoxId': row[0],
                     'UserCCId': row[1],
                     'UserName': row[2] }
                 data_dict.update({tsize: row_dict})
@@ -211,6 +211,7 @@ class SafeBoxStorage(object):
                 tsize = tsize + 1
 
             reply_dict = { 'status': "OK", 'size': tsize, 'list': data_dict }
+            pprint(reply_dict)
             request.write(json.dumps(reply_dict, encoding="utf-8"));
             request.finish()
 

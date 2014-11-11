@@ -161,7 +161,7 @@ class Files(Resource):
     #
     # list: To list all files on user's pbox.
     # 'method' = "list"
-    # '' = <the pbox id>
+    # 'ccid' = <the user cc id>
     #
     # getfile: To download a file from user's pbox.
     # 'method' = "getfile"
@@ -183,9 +183,9 @@ class Files(Resource):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'ccid' not specified."} }
             #TODO: You don't need this, change it!
-            if ('pboxid' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                          'message': "Argument 'pboxid' not specified."} }
+            # if ('pboxid' not in request.args.keys()) & (error == None):
+            #     error = { 'status': {'error': "Invalid Request",
+            #               'message': "Argument 'pboxid' not specified."} }
 
             elif (error == None):
                 return handler.handleListFiles(request)
