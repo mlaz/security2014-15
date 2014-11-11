@@ -16,6 +16,7 @@ import os
 import json
 
 from sfbx_client_cryptography import ClientIdentity
+from sfbx_client_cryptography import getTicket
 from sfbx_client_protocols import *
 
 #
@@ -26,7 +27,7 @@ class SafeBoxClient():
 
     #
     def startClientId(self, key):
-        self.client_id = ClientId(self.ccid, self.passwd, key)
+        self.client_id = ClientIdentity(self.ccid, self.passwd, key)
 
     def handleGetKey(self):
         def handleGetKey_cb(response):
@@ -213,15 +214,13 @@ class SafeBoxClient():
         s = line.split()
         if len(s) != 3:
             print "Error: invalid arguments\n"
-            print "Correct usage: login <username> <password>"
+            print "Correct usage: login <CCnumber> <password>"
             return
         else:
-            username = s[1]
-            password = s[2]
-
-            return "sucess"
-
-        #TODO
+            self.ccid = s[1]
+            self.passwd = s[2]    
+            print "Login sucessful"
+            return self.handleGetKey()
 
     def handleGetMData(self):
         def handleGetMData_cb(response):
@@ -281,7 +280,7 @@ class SafeBoxClient():
                 value = _decode_list(value)
             elif isinstance(value, dict):
                 value = _decode_dict(value)
-            rv[key] = value
+                rv[key] = value
         return rv
 
     def handle_result(response):

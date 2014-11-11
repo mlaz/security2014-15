@@ -6,6 +6,8 @@ from pprint import pprint
 from StringIO import StringIO
 import json
 
+from sfbx_decode_utils import DecodeUtils
+
 # FileDownload:
 class FileDownload(Protocol):
     def __init__(self, finished, cons):
@@ -45,12 +47,13 @@ class getKey(Protocol):
         self.total_response += bytes
 
     def connectionLost(self, reason):
-        data = formatKey(self.total_response)
-        print 'The key is:\n', data)
-        finished.callback(data)
+        data = self.formatKey(self.total_response)
+        print 'The key is:\n', data
+        self.finished.callback(data)
 
-    def formatKey(response):
-        response = json.loads(response, object_hook=_decode_dict)
+    def formatKey(self, response):
+        response = json.loads(response)
+        #response = json.loads(response, object_hook=du.decode_dict)
         if (response["status"] == ["error"]):
             return (response["error"])
         else:
@@ -68,7 +71,8 @@ class getMData(Protocol):
         print 'User Data:\n', formatMData(self.total_response)
 
     def formatMData(response):
-        response = json.loads(response, object_hook=_decode_dict)
+        response = json.loads(response)
+        #response = json.loads(response, object_hook=du.decode_dict)
         if (response["status"] == ["error"]):
             print(response["error"])
         else:
@@ -78,3 +82,5 @@ class getMData(Protocol):
             #s = s.strip(",")
             #s = s.strip('"')
             print s
+
+du = DecodeUtils()
