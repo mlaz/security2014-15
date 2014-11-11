@@ -185,19 +185,10 @@ class SafeBoxClient():
             return
         else:
             username = s[1]
-            ccnumber = s[2]
-            password = s[3]
+            self.ccid = s[2]
+            self.passwd = s[3]
 
-            #if not os.path.exists(username):
-            #    os.makedirs(username)
-            #fn = username + "/private.pem"
-            #if not os.path.exists(fn):
-            #    open(fn, 'w').close()
-            #fn = username + "/public.pem"
-            #if not os.path.exists(fn):
-            #    open(fn, 'w').close()
-
-            ci = ClientIdentity("rsakeys", password)
+             
 
             body = FileBodyProducer(StringIO(ci.pub_key.exportKey('PEM')))
             d = agent.request(
