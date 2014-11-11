@@ -112,7 +112,7 @@ class SafeBoxStorage(object):
 
     # listPBoxes(): Queries for all entries on PBox's basic meta-data attributes.
     def listPBoxes(self, request, pboxid):
-        # TODO: take 
+        # TODO: take
         # listPBoxes_cb(): Callback for listPBoxes(), processes retrieved data for reply.
         def listPBoxes_cb(data):
             data_dict = {}
@@ -335,8 +335,6 @@ class SafeBoxStorage(object):
         #  if anything goes wrong at this point
         # This method should start writing the file to the disk.
         def writeFile_cb(data):
-            pboxid = str(request.args['pboxid'])
-            pboxid = strip_text(pboxid)
             # path = <OwnerPBoxId>/<FileId>
             file = open(pboxid + "/" + str(data[0][0]) ,"w")
             prod = FD2FileProducer(request)
@@ -349,8 +347,8 @@ class SafeBoxStorage(object):
 
         # This query should retreive the highest file number for a given pboxid
         def getFilePath_cb(data):
-            pboxid = str(request.args['pboxid'])
-            pboxid = strip_text(pboxid)
+            # pboxid = str(request.args['pboxid'])
+            # pboxid = strip_text(pboxid)
             d = self.dbpool.runQuery(
                 "SELECT FileId " +
                 "FROM File " +
@@ -362,8 +360,6 @@ class SafeBoxStorage(object):
             return NOT_DONE_YET
 
         #
-        pboxid = str(request.args['pboxid'])
-        pboxid = strip_text(pboxid)
         filename = str(request.args['name'])
         filename = strip_text(filename)
         iv = str(request.args['iv'])

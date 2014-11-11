@@ -58,10 +58,11 @@ class ServerIdentity(object):
 
     def verifySignature(self, signature, data, key=None):
         if key is None:
+            print  "KEY NONE!"
             key = self.pub_key
         verifier = PKCS1_v1_5.new(key)
         hash = SHA256.new(data)
-        return verifier.verify(hash, signature)
+        return verifier.verify(hash, str(signature))
 
 # class TicketManager:
 # This class provides a facility generating and validating tickets which will be signed
@@ -98,7 +99,9 @@ class TicketManager(object):
             original = self.active_tickets[pboxid]['ticket']
             del self.active_tickets[pboxid]
 
-        signature = self.server.decryptData(b64decode(str(signature)))#TEST THIS!
+        cli_key = RSA.importKey(cli_key)
+        print signature
+        signature = self.server.decryptData(b64decode(signature))#TEST THIS!
         return self.server.verifySignature(signature, original, cli_key)
 
 
@@ -168,10 +171,12 @@ class AccessCtrlHandler(object):
                 print pubkey
 
                 if self.ticket_manager.validateTicket(ticket, pboxid, pubkey):
+                    print "Valid Ticket!"
                     d = method(request, pboxid)
                     return NOT_DONE_YET
 
                 else:
+                    print "Invalid Ticket!"
                     reply_dict = { 'status': {'error': "Invalid Ticket",
                                           'message': 'N/A'} }
 
