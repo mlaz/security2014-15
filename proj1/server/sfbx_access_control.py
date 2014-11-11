@@ -221,7 +221,7 @@ class AccessCtrlHandler(object):
                                       'message': "No key on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
 
-
+        cli_key = RSA.importKey(key_txt)
         if not cli_key.can_encrypt():
             reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No key on request body."} }

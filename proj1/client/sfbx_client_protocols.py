@@ -22,7 +22,7 @@ class FileDownload(Protocol):
 
     def connectionLost(self, reason):
         self.cons.unregisterProducer()
-        print 'Finished receiving body:', reason.getErrorMessage()
+#        print 'Finished receiving body:', reason.getErrorMessage()
         self.finished.callback(None)
 
 
@@ -36,7 +36,7 @@ class BeginningPrinter(Protocol):
 
     def connectionLost(self, reason):
         print 'Response:\n', self.formatResponse(self.total_response)
-        print 'Finished receiving body: ', reason.getErrorMessage()
+#        print 'Finished receiving body: ', reason.getErrorMessage()
 
     def formatResponse(self, response):
         #response = json.dumps(response)
@@ -60,7 +60,7 @@ class getKey(Protocol):
 
     def connectionLost(self, reason):
         data = self.formatKey(self.total_response)
-        print 'The key is:\n', data
+        #print 'The key is:\n', data
         self.finished.callback(data)
 
     def formatKey(self, response):

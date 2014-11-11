@@ -93,12 +93,12 @@ class getTicket(Protocol):
             return cryTicket
 
     def process_ticket(self, ticket):
-        print "server's ticket: ", ticket
+        # print "server's ticket: ", ticket
         dci = self.ci.decryptData(b64decode(ticket))
         sci = self.ci.signData(dci)
         eci = self.ci.encryptData(sci)
         enc = b64encode(eci[0])
-        print "signed and encoded ticket: ", enc
+        # print "signed and encoded ticket: ", enc
         return enc
 
 

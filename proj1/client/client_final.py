@@ -9,9 +9,7 @@ class CommandReceiver(basic.LineReceiver):
 
     def connectionMade(self):
         self.transport.write("Welcome to SafeBox command application.\n"
-                             + "Type 'register <UserName> <ccNumber> <password>' or "
-#                             + "'login <PCCID number> <password>' to start using the application\n"
-#                             + "\nFOR TEST PURPOSES: login  mypass\n\n"
+                             + "Type 'help' for help.\n"
                          )
 
     def lineReceived(self, line):
@@ -45,7 +43,7 @@ class CommandReceiver(basic.LineReceiver):
                  self.transport.write("\nThe availabe commands are:\nlist pboxes"
                                       + "\nlist files\nget file <fileId>\nupdate file <fileId>\n"
                                       + "delete file <fileId>\nshare file <fileId> <destinationPBoxId>\nquit\n")
-        elif method == "quit":
+        elif (method == "quit") or (method == "exit"):
             reactor.stop()
             self.transport.write("Bye Bye!")
         else:
@@ -60,7 +58,7 @@ if __name__ == "__main__":
         sys.exit('ERROR: Directiry %s not found!' % sys.argv[1])
 
     if len(sys.argv) > 3:
-        uname = argv[3]
+        uname = sys.argv[3]
     else:
         uname = ""
 

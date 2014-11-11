@@ -31,11 +31,13 @@ class SafeBoxClient():
         # checking if client is already registered
         def checkClientReg_cb(ticket):
             if ticket is None:
-                print "user not registered!"
+                print "User not registered..."
                 if name is "":
                     print "Please provide your name for registry."
-            else:
-                print "Welcome!"
+                    reactor.stop()
+                else:
+                    print "Registering user."
+                    return self.handleRegister(name)
 
         # Instanciating ClientIdentity
         def startClientId_cb(key):
@@ -49,11 +51,11 @@ class SafeBoxClient():
     # handleGetKey: handles getkey operations
     def handleGetKey(self, method):
         def handleGetKey_cb(response):
-            print 'Response version:', response.version
-            print 'Response code:', response.code
-            print 'Response phrase:', response.phrase
-            print 'Response headers:'
-            print pformat(list(response.headers.getAllRawHeaders()))
+            # print 'Response version:', response.version
+            # print 'Response code:', response.code
+            # print 'Response phrase:', response.phrase
+            # print 'Response headers:'
+            # print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
             defer.addCallback(method)
             response.deliverBody(getKey(defer))
@@ -74,11 +76,11 @@ class SafeBoxClient():
     # handleGetTicket: handles getticket operations
     def handleGetTicket(self, method):
         def handleGetTicket_cb(response):
-            print 'Response version: ', response.version
-            print 'Response code: ', response.code
-            print 'Response phrase: ', response.phrase
-            print 'Response headers: '
-            print pformat(list(response.headers.getAllRawHeaders()))
+            # print 'Response version: ', response.version
+            # print 'Response code: ', response.code
+            # print 'Response phrase: ', response.phrase
+            # print 'Response headers: '
+            # print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
             defer.addCallback(method)
             response.deliverBody(getTicket(defer, self.client_id))
@@ -96,7 +98,22 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
+    # handleRegister: Handles register commands.
+    def handleRegister(self, name):
 
+        agent = Agent(reactor)
+        body = FileBodyProducer(StringIO(self.client_id.pub_key.exportKey('PEM')))
+        d = agent.request(
+            'PUT',
+            'http://localhost:8000/pboxes/?method=register&ccid='+ self.ccid
+            + '&name=' + name,
+            Headers({'User-Agent': ['Twisted Web Client Example'],
+                     'Content-Type': ['text/x-greeting']}),
+            body)
+
+        return NOT_DONE_YET
+
+    # handleGetMData: Handles get pbox metadata operations.
     def handleGetMData(self, method):
         def handleGetMData_cb(response):
             print 'Response version: ', response.version
@@ -122,55 +139,14 @@ class SafeBoxClient():
         return NOT_DONE_YET
 
 
-    # handleRegister: Handles register commands.
-    def handleRegister(self, line):
-        def handleRegister_cb(response):
-            return NOT_DONE_YET
-
-        agent = Agent(reactor)
-        s = line.split()
-        if len(s) != 4:
-            print "Error: invalid arguments\n"
-            print "Correct usage: register <username> <ccnumber> <password>"
-            return
-        else:
-            username = s[1]
-            self.ccid = s[2]
-            self.passwd = s[3]
-
-
-
-            body = FileBodyProducer(StringIO(ci.pub_key.exportKey('PEM')))
-            d = agent.request(
-                        'PUT',
-                        'http://localhost:8000/pboxes/?method=register&ccid='+ ccnumber +'&name=' + username,
-                        Headers({'User-Agent': ['Twisted Web Client Example'],
-                        'Content-Type': ['text/x-greeting']}),
-                        body)
-
-            d.addCallback(handleRegister_cb)
-            return NOT_DONE_YET
-
-    # def handleLogin(self, line):
-    #     s = line.split()
-    #     if len(s) != 3:
-    #         print "Error: invalid arguments\n"
-    #         print "Correct usage: login <CCnumber> <password>"
-    #         return
-    #     else:
-    #         self.ccid = s[1]
-    #         self.passwd = s[2]
-    #         print "Login sucessful"
-    #         return self.handleGetKey()
-
     # handleList: handles every list command
     def handleList(self, line):
         def handleList_cb(response):
-            print 'Response version:', response.version
-            print 'Response code:', response.code
-            print 'Response phrase:', response.phrase
-            print 'Response headers:'
-            print pformat(list(response.headers.getAllRawHeaders()))
+            # print 'Response version:', response.version
+            # print 'Response code:', response.code
+            # print 'Response phrase:', response.phrase
+            # print 'Response headers:'
+            # print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
             response.deliverBody(BeginningPrinter(defer))
             return NOT_DONE_YET
@@ -259,44 +235,44 @@ class SafeBoxClient():
 
     def handleDelete(self, line):
         return
+#TO BE DELETED
+# ### Helper functions: mostly for formatting
+#     def formatResponse(response):
+#         response = json.dumps(response)
+#         pprint(response)
+#         response = json.loads(response, object_hook=_decode_dict)
+#         if (response["status"] == ["error"]):
+#             print(response["error"])
+#         else:
+#             for elem in response["list"].keys():
+#                 for attr in response["list"].get(elem):
+#                     print attr, ": ", response["list"].get(elem).get(attr)
 
-### Helper functions: mostly for formatting
-    def formatResponse(response):
-        response = json.dumps(response)
-        pprint(response)
-        response = json.loads(response, object_hook=_decode_dict)
-        if (response["status"] == ["error"]):
-            print(response["error"])
-        else:
-            for elem in response["list"].keys():
-                for attr in response["list"].get(elem):
-                    print attr, ": ", response["list"].get(elem).get(attr)
+#     def _decode_list(data):
+#         rv = []
+#         for item in data:
+#             if isinstance(item, unicode):
+#                 item = item.encode('utf-8')
+#             elif isinstance(item, list):
+#                 item = _decode_list(item)
+#             elif isinstance(item, dict):
+#                 item = _decode_dict(item)
+#                 rv.append(item)
+#         return rv
 
-    def _decode_list(data):
-        rv = []
-        for item in data:
-            if isinstance(item, unicode):
-                item = item.encode('utf-8')
-            elif isinstance(item, list):
-                item = _decode_list(item)
-            elif isinstance(item, dict):
-                item = _decode_dict(item)
-                rv.append(item)
-        return rv
+#     def _decode_dict(data):
+#         rv = {}
+#         for key, value in data.iteritems():
+#             if isinstance(key, unicode):
+#                 key = key.encode('utf-8')
+#             if isinstance(value, unicode):
+#                 value = value.encode('utf-8')
+#             elif isinstance(value, list):
+#                 value = _decode_list(value)
+#             elif isinstance(value, dict):
+#                 value = _decode_dict(value)
+#                 rv[key] = value
+#         return rv
 
-    def _decode_dict(data):
-        rv = {}
-        for key, value in data.iteritems():
-            if isinstance(key, unicode):
-                key = key.encode('utf-8')
-            if isinstance(value, unicode):
-                value = value.encode('utf-8')
-            elif isinstance(value, list):
-                value = _decode_list(value)
-            elif isinstance(value, dict):
-                value = _decode_dict(value)
-                rv[key] = value
-        return rv
-
-    def handle_result(response):
-        print " "
+#     def handle_result(response):
+#         print " "
