@@ -21,15 +21,25 @@ from sfbx_client_protocols import *
 
 #
 class SafeBoxClient():
-    def __init__(self):
-        self.server = "localhost:8000"
-        self.client_id = self.ccid = self.passwd = None
+    def __init__(self, server_addr="localhost:8000"):
+        self.server_addr = server_addr
+        self.client_id = self.ccid =  None
 
-    #
-    def startClientId(self, key):
-        self.client_id = ClientIdentity(self.ccid, self.passwd, key)
+    #initializes the client's remaining attributes
+    def startClient(self, ccid, passwd):
 
-    def handleGetKey(self):
+        def startClientId_cb(key):
+            self.client_id = ClientIdentity(self.ccid, passwd, key)
+            
+
+
+            #TODO: check if the user is registered if not register
+        self.ccid = ccid
+        return self.handleGetKey(startClientId_cb)
+
+
+    # handleGetKey: handles getkey operations
+    def handleGetKey(self, method):
         def handleGetKey_cb(response):
             print 'Response version:', response.version
             print 'Response code:', response.code
@@ -37,7 +47,7 @@ class SafeBoxClient():
             print 'Response headers:'
             print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
-            defer.addCallback(self.startClientId)
+            defer.addCallback(method)
             response.deliverBody(getKey(defer))
             return NOT_DONE_YET
 
@@ -52,8 +62,8 @@ class SafeBoxClient():
         d.addCallback(handleGetKey_cb)
 
         return NOT_DONE_YET
-  
-    #
+
+    # handleGetTicket: handles getticket operations
     def handleGetTicket(self, method):
         def handleGetTicket_cb(response):
             print 'Response version: ', response.version
@@ -77,7 +87,74 @@ class SafeBoxClient():
         d.addCallback(handleGetTicket_cb)
 
         return NOT_DONE_YET
-    #
+
+    # handleRegister: Handles register commands.
+    def handleRegister(self, line):
+        def handleRegister_cb(response):
+            return NOT_DONE_YET
+
+        agent = Agent(reactor)
+        s = line.split()
+        if len(s) != 4:
+            print "Error: invalid arguments\n"
+            print "Correct usage: register <username> <ccnumber> <password>"
+            return
+        else:
+            username = s[1]
+            self.ccid = s[2]
+            self.passwd = s[3]
+
+
+
+            body = FileBodyProducer(StringIO(ci.pub_key.exportKey('PEM')))
+            d = agent.request(
+                        'PUT',
+                        'http://localhost:8000/pboxes/?method=register&ccid='+ ccnumber +'&name=' + username,
+                        Headers({'User-Agent': ['Twisted Web Client Example'],
+                        'Content-Type': ['text/x-greeting']}),
+                        body)
+
+            d.addCallback(handleRegister_cb)
+            return NOT_DONE_YET
+
+    # def handleLogin(self, line):
+    #     s = line.split()
+    #     if len(s) != 3:
+    #         print "Error: invalid arguments\n"
+    #         print "Correct usage: login <CCnumber> <password>"
+    #         return
+    #     else:
+    #         self.ccid = s[1]
+    #         self.passwd = s[2]
+    #         print "Login sucessful"
+    #         return self.handleGetKey()
+
+    def handleGetMData(self, method):
+        def handleGetMData_cb(response):
+            print 'Response version: ', response.version
+            print 'Response code: ', response.code
+            print 'Response phrase: ', response.phrase
+            print 'Response headers: '
+            print pformat(list(response.headers.getAllRawHeaders()))
+            defer = Deferred()
+            defer.addCallback(self)
+            response.deliverBody(getMData(defer))
+            return NOT_DONE_YET
+
+        agent = Agent(reactor)
+        d = agent.request(
+			'GET',
+            'http://localhost:8000/pboxes/?method=get_mdata&ccid=' + self.ccid,
+            Headers({'User-Agent': ['Twisted Web Client Example'],
+            'Content-Type': ['text/x-greeting']}),
+            None)
+
+        d.addCallback(handleGetMData_cb)
+
+        return NOT_DONE_YET
+
+
+    # handleList: handles every list command
     def handleList(self, line):
         def handleList_cb(response):
             print 'Response version:', response.version
@@ -94,7 +171,7 @@ class SafeBoxClient():
 	    body = FileBodyProducer(StringIO(signedTicket))
             d = agent.request(
                     'GET',
-                    'http://localhost:8000/pboxes/?method=list&ccid=678909876',
+                    'http://localhost:8000/pboxes/?method=list&ccid=' + self.ccid,
                     Headers({'User-Agent': ['Twisted Web Client Example'],
                     'Content-Type': ['text/x-greeting']}),
                     body)
@@ -106,7 +183,7 @@ class SafeBoxClient():
             body = FileBodyProducer(StringIO(signedTicket))
 	    d = agent.request(
                     'GET',
-                    'http://localhost:8000/files/?method=list&pboxid=3',
+                    'http://localhost:8000/files/?method=list&ccid=' + self.ccid,
                     Headers({'User-Agent': ['Twisted Web Client Example'],
                     'Content-Type': ['text/x-greeting']}),
                     body)
@@ -128,7 +205,8 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
-    def handleGet(self, line):
+    # handleGetFile:
+    def handleGetFile(self, line):
         def handleGet_cb(response, file):
             print 'Response version:', response.version
             print 'Response code:', response.code
@@ -173,70 +251,71 @@ class SafeBoxClient():
     def handleDelete(self, line):
         return
 
-    def handleRegister(self, line):
-        def handleRegister_cb(response):
-            return NOT_DONE_YET
+    # # handleRegister: Handles register commands.
+    # def handleRegister(self, line):
+    #     def handleRegister_cb(response):
+    #         return NOT_DONE_YET
 
-        agent = Agent(reactor)
-        s = line.split()
-        if len(s) != 4:
-            print "Error: invalid arguments\n"
-            print "Correct usage: register <username> <ccnumber> <password>"
-            return
-        else:
-            username = s[1]
-            self.ccid = s[2]
-            self.passwd = s[3]
+    #     agent = Agent(reactor)
+    #     s = line.split()
+    #     if len(s) != 4:
+    #         print "Error: invalid arguments\n"
+    #         print "Correct usage: register <username> <ccnumber> <password>"
+    #         return
+    #     else:
+    #         username = s[1]
+    #         self.ccid = s[2]
+    #         self.passwd = s[3]
 
-             
 
-            body = FileBodyProducer(StringIO(ci.pub_key.exportKey('PEM')))
-            d = agent.request(
-                        'PUT',
-                        'http://localhost:8000/pboxes/?method=register&ccid='+ ccnumber +'&name=' + username,
-                        Headers({'User-Agent': ['Twisted Web Client Example'],
-                        'Content-Type': ['text/x-greeting']}),
-                        body)
 
-            d.addCallback(handleRegister_cb)
-            return NOT_DONE_YET
+    #         body = FileBodyProducer(StringIO(ci.pub_key.exportKey('PEM')))
+    #         d = agent.request(
+    #                     'PUT',
+    #                     'http://localhost:8000/pboxes/?method=register&ccid='+ ccnumber +'&name=' + username,
+    #                     Headers({'User-Agent': ['Twisted Web Client Example'],
+    #                     'Content-Type': ['text/x-greeting']}),
+    #                     body)
 
-    def handleLogin(self, line):
-        s = line.split()
-        if len(s) != 3:
-            print "Error: invalid arguments\n"
-            print "Correct usage: login <CCnumber> <password>"
-            return
-        else:
-            self.ccid = s[1]
-            self.passwd = s[2]    
-            print "Login sucessful"
-            return self.handleGetKey()
+    #         d.addCallback(handleRegister_cb)
+    #         return NOT_DONE_YET
 
-    def handleGetMData(self):
-        def handleGetMData_cb(response):
-            print 'Response version: ', response.version
-            print 'Response code: ', response.code
-            print 'Response phrase: ', response.phrase
-            print 'Response headers: '
-            print pformat(list(response.headers.getAllRawHeaders()))
-            defer = Deferred()
-            response.deliverBody(getMData(defer))
-            return NOT_DONE_YET
+    # # def handleLogin(self, line):
+    # #     s = line.split()
+    # #     if len(s) != 3:
+    # #         print "Error: invalid arguments\n"
+    # #         print "Correct usage: login <CCnumber> <password>"
+    # #         return
+    # #     else:
+    # #         self.ccid = s[1]
+    # #         self.passwd = s[2]
+    # #         print "Login sucessful"
+    # #         return self.handleGetKey()
 
-        agent = Agent(reactor)
-        d = agent.request(
-			'GET',
-            'http://localhost:8000/pboxes/?method=get_mdata&ccid=123456789',
-            Headers({'User-Agent': ['Twisted Web Client Example'],
-            'Content-Type': ['text/x-greeting']}),
-            None)
+    # def handleGetMData(self):
+    #     def handleGetMData_cb(response):
+    #         print 'Response version: ', response.version
+    #         print 'Response code: ', response.code
+    #         print 'Response phrase: ', response.phrase
+    #         print 'Response headers: '
+    #         print pformat(list(response.headers.getAllRawHeaders()))
+    #         defer = Deferred()
+    #         response.deliverBody(getMData(defer))
+    #         return NOT_DONE_YET
 
-        d.addCallback(handleGetMData_cb)
+    #     agent = Agent(reactor)
+    #     d = agent.request(
+    #     		'GET',
+    #         'http://localhost:8000/pboxes/?method=get_mdata&ccid=123456789',
+    #         Headers({'User-Agent': ['Twisted Web Client Example'],
+    #         'Content-Type': ['text/x-greeting']}),
+    #         None)
 
-        return NOT_DONE_YET
+    #     d.addCallback(handleGetMData_cb)
 
-### Helper functions:
+    #     return NOT_DONE_YET
+
+### Helper functions: mostly for formatting
     def formatResponse(response):
         response = json.dumps(response)
         pprint(response)
@@ -247,7 +326,7 @@ class SafeBoxClient():
             for elem in response["list"].keys():
                 for attr in response["list"].get(elem):
                     print attr, ": ", response["list"].get(elem).get(attr)
-                    
+
     def _decode_list(data):
         rv = []
         for item in data:

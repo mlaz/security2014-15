@@ -37,7 +37,7 @@ class BeginningPrinter(Protocol):
     def connectionLost(self, reason):
         print 'Response:\n', self.formatResponse(self.total_response)
         print 'Finished receiving body: ', reason.getErrorMessage()
-        
+
     def formatResponse(self, response):
         #response = json.dumps(response)
         #pprint(response)
