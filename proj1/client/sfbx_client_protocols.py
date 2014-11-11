@@ -35,8 +35,20 @@ class BeginningPrinter(Protocol):
         self.total_response += bytes
 
     def connectionLost(self, reason):
-        print 'Response:\n', formatResponse(self.total_response)
+        print 'Response:\n', self.formatResponse(self.total_response)
         print 'Finished receiving body: ', reason.getErrorMessage()
+        
+    def formatResponse(self, response):
+        #response = json.dumps(response)
+        #pprint(response)
+        #response = json.loads(response, object_hook=_decode_dict)
+        response = json.loads(response)
+        if (response["status"] == ["error"]):
+            print(response["error"])
+        else:
+            for elem in response["list"].keys():
+                for attr in response["list"].get(elem):
+                    print attr, ": ", response["list"].get(elem).get(attr)
 
 class getKey(Protocol):
     def __init__(self, finished):

@@ -106,7 +106,7 @@ class SafeBoxClient():
             body = FileBodyProducer(StringIO(signedTicket))
 	    d = agent.request(
                     'GET',
-                    'http://localhost:8000/files/?method=list&pboxid=1',
+                    'http://localhost:8000/files/?method=list&pboxid=3',
                     Headers({'User-Agent': ['Twisted Web Client Example'],
                     'Content-Type': ['text/x-greeting']}),
                     body)
@@ -256,7 +256,7 @@ class SafeBoxClient():
             for elem in response["list"].keys():
                 for attr in response["list"].get(elem):
                     print attr, ": ", response["list"].get(elem).get(attr)
-
+                    
     def _decode_list(data):
         rv = []
         for item in data:
