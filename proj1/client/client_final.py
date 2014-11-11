@@ -25,7 +25,7 @@ class CommandReceiver(basic.LineReceiver):
         elif method == "get":
             return client.handleGet(line)
         elif method == "put":
-            return client.handlePut(line)
+            return client.handlePutFile(line)
         elif method == "update":
             return client.handleUpdate(line)
         elif method == "delete":

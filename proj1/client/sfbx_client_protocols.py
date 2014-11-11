@@ -90,7 +90,7 @@ class getMData(Protocol):
             data = response["status"]["message"]
 
         else:
-            data = response["data"]
+            data = response
             # data = data.strip("(")
             # data = data.strip(")")
             # data = data.strip(",")

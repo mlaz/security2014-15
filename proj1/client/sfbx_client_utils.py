@@ -3,7 +3,7 @@ from twisted.web.client import Agent, FileBodyProducer
 from twisted.web.http_headers import Headers
 from twisted.internet import abstract
 from twisted.web.server import NOT_DONE_YET
-from twisted.web import iweb
+from twisted.web import iweb, http_headers
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.protocols.ftp import FileConsumer
@@ -12,14 +12,16 @@ from StringIO import StringIO
 from pprint import pformat
 from pprint import pprint
 from zope import interface
+
 import os
 import json
 
 from sfbx_client_cryptography import ClientIdentity
 from sfbx_client_cryptography import getTicket
 from sfbx_client_protocols import *
+from sfbx_fs_utils import _FileProducer
 
-#
+# SafeBoxClient():
 class SafeBoxClient():
     def __init__(self, server_addr="localhost:8000"):
         self.server_addr = server_addr
@@ -219,66 +221,82 @@ class SafeBoxClient():
 
     # handleGetFile:
     def handleGetFile(self, line):
-        def handleGet_cb(response, file):
-            print 'Response version:', response.version
-            print 'Response code:', response.code
-            print 'Response phrase:', response.phrase
-            print 'Response headers:'
-            print pformat(list(response.headers.getAllRawHeaders()))
-            defer = Deferred()
-            cons = FileConsumer(file)
-            response.deliverBody(FileDownload(defer, cons))
-            return NOT_DONE_YET
+        # def handleGet_cb(response, file):
+        #     print 'Response version:', response.version
+        #     print 'Response code:', response.code
+        #     print 'Response phrase:', response.phrase
+        #     print 'Response headers:'
+        #     print pformat(list(response.headers.getAllRawHeaders()))
+        #     defer = Deferred()
+        #     cons = FileConsumer(file)
+        #     response.deliverBody(FileDownload(defer, cons))
+        #     return NOT_DONE_YET
 
 
-        agent = Agent(reactor)
-        s = line.split()
-        if len(s) != 3:
-            print "Error: invalid arguments!\n"
-            return
-        else:
-            if s[1].lower() != "file":
-                print "Error: invalid arguments!\n"
-                print "Correct usage: get file <fileId>"
-            elif s[1].lower() == "file":
-                fileId = s[2].lower()
-                file = open(fileId, "w")
-                d = agent.request(
-                        'GET',
-                        'http://localhost:8000/files/?method=getfile&fileid='+ fileId +'&pboxid=1',
-                        Headers({'User-Agent': ['Twisted Web Client Example'],
-                        'Content-Type': ['text/x-greeting']}),
-                        None)
+        # agent = Agent(reactor)
+        # s = line.split()
+        # if len(s) != 3:
+        #     print "Error: invalid arguments!\n"
+        #     return
+        # else:
+        #     if s[1].lower() != "file":
+        #         print "Error: invalid arguments!\n"
+        #         print "Correct usage: get file <fileId>"
+        #     elif s[1].lower() == "file":
+        #         fileId = s[2].lower()
+        #         file = open(fileId, "w")
+        #         d = agent.request(
+        #                 'GET',
+        #                 'http://localhost:8000/files/?method=getfile&fileid='+ fileId +'&pboxid=1',
+        #                 Headers({'User-Agent': ['Twisted Web Client Example'],
+        #                 'Content-Type': ['text/x-greeting']}),
+        #                 None)
 
-            d.addCallback(handleGet_cb, file)
-
-            return NOT_DONE_YET
-
-    def handlePutFile(self, line):
-        s = line.split()
-        if len(s) != 3:
-            print "Error: invalid arguments!\n"
-            return
-        else:
-            if s[1].lower() != "file":
-                print "Error: invalid arguments!\n"
-                print "Correct usage: put file <filepath>"
-                return
-#            elif 
-
-        agent = Agent(reactor)
-        body = FileBodyProducer(StringIO(ticket))
-        d = agent.request(
-			'GET',
-            'http://localhost:8000/pboxes/?method=get_mdata&ccid='
-            + self.ccid + "&tgtccid=" + tgtccid,
-            Headers({'User-Agent': ['Twisted Web Client Example'],
-            'Content-Type': ['text/x-greeting']}),
-            body)
-
-        d.addCallback(handleGetMData_cb)
-
+        #     d.addCallback(handleGet_cb, file)
         return NOT_DONE_YET
+
+    # handlePutFile:
+    def handlePutFile(self, line):
+        def printPutReply_cb(response):
+            print "FINISHED"
+
+            defer = Deferred()
+            response.deliverBody(getMData(defer))
+            return NOT_DONE_YET
+
+        def putFile_cb(ticket):
+            print "HERE!!!!"
+            s = line.split()
+            file = open(s[2], 'r')
+            agent = Agent(reactor)
+            body = _FileProducer(file ,ticket)
+            headers = http_headers.Headers()
+            d = agent.request(
+                'PUT',
+                'http://localhost:8000/files/?method=putfile&ccid='
+                + self.ccid + "&name=" + os.path.basename(s[2]),
+                headers,
+                body)
+            d.addCallback(printPutReply_cb)
+
+            return NOT_DONE_YET
+
+
+        s = line.split()
+        if len(s) != 3:
+            print "Error: invalid arguments!\n"
+            return
+        else:
+            if s[1].lower() != "file":
+                print "Error: invalid arguments!\n"
+                print "Usage: put file <filepath>"
+                return
+            elif not os.path.exists(s[2]):
+                print "Error: File " + s[2] + " does not exist.\n"
+                return
+
+
+        return self.handleGetTicket(putFile_cb)
 
 
     def handleUpdate(self, line):

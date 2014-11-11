@@ -156,6 +156,7 @@ class AccessCtrlHandler(object):
         # is being called to validate data transfer operations
         if not ticket:
             ticket = request.content.read(TICKET_SIZE)
+            print str(ticket)
             if not ticket:
                 reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No ticket on request body."} }

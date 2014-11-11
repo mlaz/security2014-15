@@ -213,7 +213,7 @@ class SafeBoxStorage(object):
                 tsize = tsize + 1
 
             reply_dict = { 'status': "OK", 'size': tsize, 'list': data_dict }
-            pprint(reply_dict)
+            #pprint(reply_dict)
             request.write(json.dumps(reply_dict, encoding="utf-8"));
             request.finish()
 
@@ -272,6 +272,8 @@ class SafeBoxStorage(object):
         #    pprint(request.__dict__)
         def finishRequest_cb(ignore,file):
             file.close()
+            reply_dict = { 'status': "OK" }
+            request.write(json.dumps(reply_dict, sort_keys=True, encoding="utf-8"))
             request.finish()
 
         # TODO: we shoud try a way of rollback
@@ -279,7 +281,9 @@ class SafeBoxStorage(object):
         # This method should start writing the file to the disk.
         def writeFile_cb(data):
             # path = <OwnerPBoxId>/<FileId>
-            file = open(pboxid + "/" + str(data[0][0]) ,"w")
+            if not os.path.exists(str(pboxid)):
+                os.mkdir(str(pboxid))
+            file = open(str(pboxid) + "/" + str(data[0][0]) ,"w")
             prod = FD2FileProducer(request)
             cons = FileConsumer(file)
             cons.registerProducer(prod, True)
@@ -332,7 +336,7 @@ class SafeBoxStorage(object):
         # This method should start writing the file to the disk.
         def writeFile_cb(data):
             # path = <OwnerPBoxId>/<FileId>
-            file = open(pboxid + "/" + str(data[0][0]) ,"w")
+            file = open(str(pboxid) + "/" + str(data[0][0]) ,"w")
             prod = FD2FileProducer(request)
             cons = FileConsumer(file)
             cons.registerProducer(prod, True)

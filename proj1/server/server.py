@@ -285,21 +285,13 @@ class Files(Resource):
                 error = { 'status': {'error': "Invalid Request",
                           'message': "Argument 'name' not specified."} }
 
-            # if ('iv' not in request.args.keys()) & (error == None):
-            #     error = { 'status': {'error': "Invalid Request",
-            #               'message': "Argument 'iv' not specified."} }
-
-            # if ('key' not in request.args.keys()) & (error == None):
-            #     error = { 'status': {'error': "Invalid Request",
-            #               'message': "Argument 'key' not specified."} }
-
             print request.args['method']
             if error is None:
                 return handler.handlePutFile(request)
 
-
-        error = { 'status': {'error': "Invalid Request",
-                'message': "Unknown method for this resource."} }
+        else:
+            error = { 'status': {'error': "Invalid Request",
+                    'message': "Unknown method for this resource."} }
         pprint(request.__dict__)
         return json.dumps(error, sort_keys=True, encoding="utf-8")
 
