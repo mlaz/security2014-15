@@ -3,6 +3,7 @@ from twisted.internet import defer, reactor
 from twisted.web.server import NOT_DONE_YET
 
 from Crypto.PublicKey import RSA
+from Crypto.Cipher import AES
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 from Crypto import Random
@@ -12,6 +13,8 @@ from pprint import pprint
 import json
 
 from sfbx_decode_utils import *
+
+BSIZE = AES.block_size
 
 #
 # SafeBox client crypography utilities API:
@@ -24,7 +27,7 @@ from sfbx_decode_utils import *
 # and preforming cryptographic operations on given data.
 class ClientIdentity(object):
 
-    def __init__(self, dir_name, password, server_key):
+    def __init__(self, dir_name, password, server_key=None):
         file = open(dir_name + "/private.pem", 'r')
         self.priv_key = RSA.importKey(file.read(), password)
         file.close()
@@ -33,7 +36,7 @@ class ClientIdentity(object):
         self.pub_key = RSA.importKey(file.read(), password)
         file.close()
 
-        self.server_key = RSA.importKey(server_key)
+#        self.server_key = RSA.importKey(server_key)
 
         self.signer = PKCS1_v1_5.new(self.priv_key)
         self.verifier = PKCS1_v1_5.new(self.pub_key)
@@ -59,6 +62,44 @@ class ClientIdentity(object):
             key = self.pub_key
         hash = SHA256.new(data)
         return self.verifier.verify(hash, signature)
+
+    # Symmetric cypher encryption
+
+    #encryptFileSym
+    def encryptFileSym(self, src_file, dst_file, key=None, iv=None):
+        if key is None:
+            key = self.rnd.read(BSIZE)
+        if iv is None:
+            iv = self.rnd.read(BSIZE)
+
+        cipher = AES.new(key, AES.MODE_OFB, iv)
+
+        data = src_file.read(BSIZE)
+        while(data):
+            if len(data) < BSIZE:
+                print "generating padding"
+                data = data + (BSIZE - len(data) % BSIZE) * chr(BSIZE - len(data) % BSIZE)
+            enc_data = cipher.encrypt(data)
+            dst_file.write(enc_data)
+            data = src_file.read(BSIZE)
+        src_file.close()
+        dst_file.close()
+        return (key, iv)
+
+    #encryptFileSym
+    def decryptFileSym(self, src_file, dst_file, key, iv):
+
+        cipher = AES.new(key, AES.MODE_OFB, iv)
+
+        enc_data = src_file.read(BSIZE)
+        while(enc_data):
+            data = cipher.decrypt(enc_data)
+            data = data[:-ord(data[len(data)-1:])]
+            dst_file.write(data)
+            enc_data = src_file.read(BSIZE)
+        src_file.close()
+        dst_file.close()
+        return (key, iv)
 
 
 # Some utilities:
@@ -100,5 +141,3 @@ class getTicket(Protocol):
         enc = b64encode(eci[0])
         # print "signed and encoded ticket: ", enc
         return enc
-
-

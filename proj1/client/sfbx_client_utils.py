@@ -221,38 +221,38 @@ class SafeBoxClient():
 
     # handleGetFile:
     def handleGetFile(self, line):
-        # def handleGet_cb(response, file):
-        #     print 'Response version:', response.version
-        #     print 'Response code:', response.code
-        #     print 'Response phrase:', response.phrase
-        #     print 'Response headers:'
-        #     print pformat(list(response.headers.getAllRawHeaders()))
-        #     defer = Deferred()
-        #     cons = FileConsumer(file)
-        #     response.deliverBody(FileDownload(defer, cons))
-        #     return NOT_DONE_YET
+        def handleGet_cb(response, file):
+            print 'Response version:', response.version
+            print 'Response code:', response.code
+            print 'Response phrase:', response.phrase
+            print 'Response headers:'
+            print pformat(list(response.headers.getAllRawHeaders()))
+            defer = Deferred()
+            cons = FileConsumer(file)
+            response.deliverBody(FileDownload(defer, cons))
+            return NOT_DONE_YET
 
 
-        # agent = Agent(reactor)
-        # s = line.split()
-        # if len(s) != 3:
-        #     print "Error: invalid arguments!\n"
-        #     return
-        # else:
-        #     if s[1].lower() != "file":
-        #         print "Error: invalid arguments!\n"
-        #         print "Correct usage: get file <fileId>"
-        #     elif s[1].lower() == "file":
-        #         fileId = s[2].lower()
-        #         file = open(fileId, "w")
-        #         d = agent.request(
-        #                 'GET',
-        #                 'http://localhost:8000/files/?method=getfile&fileid='+ fileId +'&pboxid=1',
-        #                 Headers({'User-Agent': ['Twisted Web Client Example'],
-        #                 'Content-Type': ['text/x-greeting']}),
-        #                 None)
+        agent = Agent(reactor)
+        s = line.split()
+        if len(s) != 3:
+            print "Error: invalid arguments!\n"
+            return
+        else:
+            if s[1].lower() != "file":
+                print "Error: invalid arguments!\n"
+                print "Correct usage: get file <fileId>"
+            elif s[1].lower() == "file":
+                fileId = s[2].lower()
+                file = open(fileId, "w")
+                d = agent.request(
+                        'GET',
+                        'http://localhost:8000/files/?method=getfile&fileid='+ fileId +'&pboxid=1',
+                        Headers({'User-Agent': ['Twisted Web Client Example'],
+                        'Content-Type': ['text/x-greeting']}),
+                        None)
 
-        #     d.addCallback(handleGet_cb, file)
+            d.addCallback(handleGet_cb, file)
         return NOT_DONE_YET
 
     # handlePutFile:

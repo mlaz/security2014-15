@@ -44,6 +44,7 @@ class ServerIdentity(object):
 
         self.rnd = Random.new()
 
+    #TODO: let's base64 encode and decode here instead of doing it elsewhere
     def encryptData(self, data, key=None):
         if key is None:
             key = self.pub_key
