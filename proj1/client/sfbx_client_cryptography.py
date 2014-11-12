@@ -84,11 +84,12 @@ class ClientIdentity(object):
             data = src_file.read(BSIZE)
         src_file.close()
         dst_file.close()
-        return (key, iv)
+        return (b64encode(key), b64encode(iv))
 
     #encryptFileSym
     def decryptFileSym(self, src_file, dst_file, key, iv):
-
+        key = b64decode(key)
+        iv = b64decode(iv)
         cipher = AES.new(key, AES.MODE_OFB, iv)
 
         enc_data = src_file.read(BSIZE)
@@ -99,7 +100,7 @@ class ClientIdentity(object):
             enc_data = src_file.read(BSIZE)
         src_file.close()
         dst_file.close()
-        return (key, iv)
+        return (b64encode(key), b64encode(iv))
 
 
 # Some utilities:

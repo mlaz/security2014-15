@@ -249,8 +249,15 @@ class SafeBoxClient():
             print "HERE!!!!"
             s = line.split()
             file = open(s[2], 'r')
+            enc_file = open("enc_file", 'w')
+            crd = self.client_id.encryptFileSym(file, enc_file)
             agent = Agent(reactor)
-            body = _FileProducer(file ,ticket)
+            dataq = []
+            dataq.append(ticket)
+            dataq.append(crd[0])
+            dataq.append(crd[1])
+            enc_file = open("enc_file", 'r')
+            body = _FileProducer(enc_file ,dataq)
             headers = http_headers.Headers()
             d = agent.request(
                 'PUT',

@@ -12,13 +12,13 @@ CHUNK_SIZE = 200
 class _FileProducer(object):
     interface.implements(iweb.IBodyProducer)
 
-    def __init__(self, file, ticket=None):
+    def __init__(self, file, dataq=None):
         self._file = file
         self._consumer = self._deferred = self._delayedProduce = None
         self._paused = False
         self.chunksize = CHUNK_SIZE
         self.length = iweb.UNKNOWN_LENGTH
-        self.ticket = ticket
+        self.dataq = dataq
 
     def startProducing(self, consumer):
         print "START"
@@ -34,11 +34,13 @@ class _FileProducer(object):
         if self._paused:
             return
 
-        if self.ticket is None:
+        if self.dataq is None:
             data = self._file.read(self.chunksize)
         else:
-            data = StringIO(self.ticket).read(self.chunksize)
-            self.ticket = None
+            data = StringIO(self.dataq.pop(0)).read(self.chunksize)
+            if len(self.dataq) == 0:
+                self.dataq = None
+
         if data:
             self._consumer.write(data)
             self._scheduleSomeProducing()
