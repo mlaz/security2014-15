@@ -168,6 +168,11 @@ class Files(Resource):
     # 'method' = "list"
     # 'ccid' = <the user cc id>
     #
+    # getfilemdata: To download a file from user's pbox.
+    # 'method' = "getfilemdata"
+    # 'fileid' = <the file id>
+    # 'ccid' = <the pbox id>
+    #
     # getfile: To download a file from user's pbox.
     # 'method' = "getfile"
     # 'fileid' = <the file id>
@@ -187,13 +192,24 @@ class Files(Resource):
             if 'ccid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'ccid' not specified."} }
-            #TODO: You don't need this, change it!
-            # if ('pboxid' not in request.args.keys()) & (error == None):
-            #     error = { 'status': {'error': "Invalid Request",
-            #               'message': "Argument 'pboxid' not specified."} }
 
             elif (error == None):
                 return handler.handleListFiles(request)
+
+
+        # getfilemdata:
+        elif request.args['method'] == ['get_mdata']:
+            if 'fileid' not in request.args.keys():
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'fileid' not specifeid."} }
+
+            if ('ccid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'pboxid' not specified."} }
+
+            elif (error == None):
+                return handler.handleGetFileMData(request)
+
 
 
         # getfile:

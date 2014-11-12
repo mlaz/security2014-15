@@ -60,12 +60,12 @@ class SafeBoxClient():
             return NOT_DONE_YET
 
         agent = Agent(reactor)
+        headers = http_headers.Headers()
         d = agent.request(
                     'GET',
                     'http://localhost:8000/session/?method=getkey',
-                    Headers({'User-Agent': ['Twisted Web Client Example'],
-                    'Content-Type': ['text/x-greeting']}),
-                    None)
+            headers,
+            None)
 
         d.addCallback(handleGetKey_cb)
 
@@ -80,12 +80,12 @@ class SafeBoxClient():
             return NOT_DONE_YET
 
         agent = Agent(reactor)
+        headers = http_headers.Headers()
         d = agent.request(
                 'GET',
                 'http://localhost:8000/session/?method=getticket&ccid='+ self.ccid,
-                Headers({'User-Agent': ['Twisted Web Client Example'],
-                'Content-Type': ['text/x-greeting']}),
-                None)
+            headers,
+            None)
 
         d.addCallback(handleGetTicket_cb)
 
@@ -96,12 +96,12 @@ class SafeBoxClient():
 
         agent = Agent(reactor)
         body = FileBodyProducer(StringIO(self.client_id.pub_key.exportKey('PEM')))
+        headers = http_headers.Headers()
         d = agent.request(
             'PUT',
             'http://localhost:8000/pboxes/?method=register&ccid='+ self.ccid
             + '&name=' + name,
-            Headers({'User-Agent': ['Twisted Web Client Example'],
-                     'Content-Type': ['text/x-greeting']}),
+            headers,
             body)
 
         return NOT_DONE_YET
@@ -117,24 +117,24 @@ class SafeBoxClient():
             print len(signedTicket)
             agent = Agent(reactor)
 	    body = FileBodyProducer(StringIO(signedTicket))
+            headers = http_headers.Headers()
             d = agent.request(
                     'GET',
                     'http://localhost:8000/pboxes/?method=list&ccid=' + self.ccid,
-                    Headers({'User-Agent': ['Twisted Web Client Example'],
-                    'Content-Type': ['text/x-greeting']}),
-                    body)
+                headers,
+                body)
             d.addCallback(handleList_cb)
             return NOT_DONE_YET
 
         def handleListFiles(signedTicket):
             agent = Agent(reactor)
             body = FileBodyProducer(StringIO(signedTicket))
+            headers = http_headers.Headers()
 	    d = agent.request(
                     'GET',
                     'http://localhost:8000/files/?method=list&ccid=' + self.ccid,
-                    Headers({'User-Agent': ['Twisted Web Client Example'],
-                    'Content-Type': ['text/x-greeting']}),
-                    body)
+                headers,
+                body)
             d.addCallback(handleList_cb)
             return NOT_DONE_YET
 
@@ -159,7 +159,10 @@ class SafeBoxClient():
 
         def handleGet_cb(ticket):
             s = line.split()
-            return self.handleGetMData(printResult_cb, ticket, s[2].lower())
+            if s[1].lower() == "pboxinfo":
+                return self.handleGetMData(printResult_cb, ticket, s[2].lower())
+            else:
+                return self.handleGetFileMData(printResult_cb, ticket, s[2].lower())
 
         def handleGetFile(signedTicket):
             def handleGetFile_cb(response, f):
@@ -170,11 +173,11 @@ class SafeBoxClient():
 
             agent = Agent(reactor)
             body = FileBodyProducer(StringIO(signedTicket))
+            headers = http_headers.Headers()
             d = agent.request(
                     'GET',
                     'http://localhost:8000/files/?method=getfile&ccid=' + self.ccid + '&fileid=' + fileId,
-                    Headers({'User-Agent': ['Twisted Web Client Example'],
-                             'Content-Type': ['text/x-greeting']}),
+                    headers,
                     body)
             f = open(fileId, "w")
             d.addCallback(handleGetFile_cb, f)
@@ -193,6 +196,8 @@ class SafeBoxClient():
                 return self.handleGetTicket(handleGetFile)
             elif s[1].lower() == "pboxinfo":
                 return self.handleGetTicket(handleGet_cb)
+            elif s[1].lower() == "fileinfo":
+                return self.handleGetTicket(handleGet_cb)
             else:
                 print "Error: invalid arguments!\n"
                 print "Correct usage: get file <fileId> or get pboxinfo <PBox Owners CC Number>"
@@ -204,22 +209,45 @@ class SafeBoxClient():
         def handleGetMData_cb(response):
             defer = Deferred()
             defer.addCallback(method)
-            response.deliverBody(DataPrinter(defer, "getmkey"))
+            response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
         agent = Agent(reactor)
         body = FileBodyProducer(StringIO(ticket))
+        headers = http_headers.Headers()
         d = agent.request(
 			'GET',
             'http://localhost:8000/pboxes/?method=get_mdata&ccid='
             + self.ccid + "&tgtccid=" + tgtccid,
-            Headers({'User-Agent': ['Twisted Web Client Example'],
-            'Content-Type': ['text/x-greeting']}),
+            headers,
             body)
 
         d.addCallback(handleGetMData_cb)
 
         return NOT_DONE_YET
+
+        # handleGetFileMData: Handles get pbox metadata operations.
+    def handleGetFileMData(self, method, ticket, fileid):
+        def handleGetFileMData_cb(response):
+            defer = Deferred()
+            defer.addCallback(method)
+            response.deliverBody(DataPrinter(defer, "getmdata"))
+            return NOT_DONE_YET
+
+        agent = Agent(reactor)
+        body = FileBodyProducer(StringIO(ticket))
+        headers = http_headers.Headers()
+        d = agent.request(
+			'GET',
+            'http://localhost:8000/files/?method=get_mdata&ccid='
+            + self.ccid + "&fileid=" + fileid,
+            headers,
+            body)
+
+        d.addCallback(handleGetFileMData_cb)
+
+        return NOT_DONE_YET
+
 
     # handlePutFile: handles file upload
     def handlePutFile(self, line):

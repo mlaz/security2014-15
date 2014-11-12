@@ -196,12 +196,9 @@ class AccessCtrlHandler(object):
 
     #handle ListPBoxes
     def handleListPBoxes(self, request):
-        #pprint(request.__dict__)
-
         return self.handleValidation(request, self.storage.listPBoxes)
 
     def handleGetPBoxMData(self, request):
-#        return self.storage.getPBoxMData(request, None)
         return self.handleValidation(request, self.storage.getPBoxMData)
 
     # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
@@ -239,6 +236,9 @@ class AccessCtrlHandler(object):
     #
     def handleListFiles(self, request):
         return self.handleValidation(request, self.storage.listFiles)
+
+    def handleGetFileMData(self, request):
+        return self.handleValidation(request, self.storage.getFileMData)
 
     def handleGetFile(self, request):
         return self.handleValidation(request, self.storage.getFile)

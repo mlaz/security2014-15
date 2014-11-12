@@ -135,7 +135,7 @@ class SafeBoxStorage(object):
         return NOT_DONE_YET
 
 
-    # getPBoxMData(): Queries the data base for all entries on all
+    # getPBoxMData(): Queries the data base for all
     # PBox's attributes for given ccid.
     def getPBoxMData(self, request, ignore):
         ccid_str = str(request.args['tgtccid'])
@@ -148,13 +148,14 @@ class SafeBoxStorage(object):
             if len(data) == 0:
                 reply_dict = { 'status': {'error': "Invalid Input", 'message': "User doesn't exist."} }
 
-            for row in data:
-                row_dict = {
-                    'PBoxId': row[0],
-                    'UserCCId': row[1],
-                    'UserName': row[2],
-                    'PubKey': row[3],}
-                reply_dict.update(row_dict)
+            else:
+                for row in data:
+                    row_dict = {
+                        'PBoxId': row[0],
+                        'UserCCId': row[1],
+                        'UserName': row[2],
+                        'PubKey': row[3],}
+                    reply_dict.update(row_dict)
 
             reply_dict = {'status': "OK", 'data': reply_dict}
             request.write(json.dumps(reply_dict, encoding="utf-8"));
@@ -182,7 +183,7 @@ class SafeBoxStorage(object):
                 reply_dict = {'status': "OK"}
 
             else:
-                reply_dict = { 'status': {'error': "Unsuccessful db transaction", 'message': data} }
+                reply_dict = { 'status': {'error': "Unsuccessful db transaction", 'message': "N/A"} }
                 request.write(json.dumps(reply_dict, encoding="utf-8"));
 
             request.finish()
@@ -193,8 +194,8 @@ class SafeBoxStorage(object):
         d.addCallback(registerPBox_cb)
         return NOT_DONE_YET
 
-# File related operations:
-#
+    # File related operations:
+    #
     # listFiles(): Retrieves FileName and FileId attributes for a given pboxid.
     def listFiles(self, request, pboxid):
         # pboxid = str(request.args['pboxid'])
@@ -217,10 +218,37 @@ class SafeBoxStorage(object):
             request.write(json.dumps(reply_dict, encoding="utf-8"));
             request.finish()
 
-
         d = self.dbpool.runQuery(
             "SELECT FileName, FileId FROM File WHERE OwnerPBoxId = ?", (pboxid,));
         d.addCallback(listFiles_cb)
+        return NOT_DONE_YET
+
+    # getFileMData(): Queries the data base for  all
+    # File's attributes for given file id and owner pboxid.
+    def getFileMData(self, request, pboxid):
+        fileid = str(request.args['fileid'])
+        fileid = strip_text(fileid)
+        # getFileMData_cb(): Callback for getFileMData(), Processes retrieved data for response.
+        def getFileMData_cb (data):
+            reply_dict = {}
+            if len(data) == 0:
+                reply_dict = { 'status': {'error': "Invalid Input", 'message': "File unreachable."} }
+            else:
+                for row in data:
+                    row_dict = {
+                        'OwnerPBoxId': row[0],
+                        'FileName': row[1],
+                        'IV': row[2],
+                        'SymKey': row[3],}
+                    reply_dict.update(row_dict)
+
+            reply_dict = {'status': "OK", 'data': reply_dict}
+            request.write(json.dumps(reply_dict, encoding="utf-8"));
+            request.finish()
+
+        d = self.dbpool.runQuery(
+            "SELECT * FROM File WHERE FileId = ? AND OwnerPBoxId = ?", (fileid, pboxid))
+        d.addCallback(getFileMData_cb)
         return NOT_DONE_YET
 
     # getFile(): Retrieves metadata for a given fileid,
@@ -248,7 +276,6 @@ class SafeBoxStorage(object):
                                      'message': "File does not exist."} }
                 request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
                 request.finish()
-
 
             file = open(file_path ,"r")
             sender = FileSender()

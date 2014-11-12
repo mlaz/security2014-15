@@ -37,7 +37,7 @@ class DataPrinter(Protocol):
 
     def connectionLost(self, reason):
         data = self.formatResponse(self.total_response)
-        print 'Response:\n', data
+        #print 'Response:\n', data
         self.finished.callback(data)
         #print 'Finished receiving body: ', reason.getErrorMessage()
 
