@@ -46,11 +46,12 @@ class ClientIdentity(object):
     def encryptData(self, data, key=None):
         if key is None:
             key = self.server_key
-        return key.encrypt(data, self.rnd.read) #TODO: Be sure about this!
+        return b64encode(key.encrypt(data, self.rnd.read)[0]) #TODO: Be sure about this!
 
     def decryptData(self, data, key=None):
         if key is None:
             key = self.priv_key
+        data = b64decode(data)
         return key.decrypt(data)
 
     def signData(self, data):
@@ -84,7 +85,7 @@ class ClientIdentity(object):
             data = src_file.read(BSIZE)
         src_file.close()
         dst_file.close()
-        return (b64encode(key), b64encode(iv))
+        return (key, iv)
 
     #encryptFileSym
     def decryptFileSym(self, src_file, dst_file, key, iv):
@@ -100,7 +101,7 @@ class ClientIdentity(object):
             enc_data = src_file.read(BSIZE)
         src_file.close()
         dst_file.close()
-        return (b64encode(key), b64encode(iv))
+        return (key, iv)
 
 
 # Some utilities:
@@ -136,9 +137,9 @@ class getTicket(Protocol):
 
     def process_ticket(self, ticket):
         # print "server's ticket: ", ticket
-        dci = self.ci.decryptData(b64decode(ticket))
+        dci = self.ci.decryptData(ticket)
         sci = self.ci.signData(dci)
-        eci = self.ci.encryptData(sci)
-        enc = b64encode(eci[0])
-        # print "signed and encoded ticket: ", enc
+        enc = self.ci.encryptData(sci)
+        #enc = b64encode(eci[0])
+        # print "signed and encoded ticket: " + enc
         return enc

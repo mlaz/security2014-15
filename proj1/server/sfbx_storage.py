@@ -306,14 +306,13 @@ class SafeBoxStorage(object):
 
         filename = str(request.args['name'])
         filename = strip_text(filename)
-        # iv = str(request.args['iv'])
-        # iv = strip_text(iv)
-        # symkey = str(request.args['key'])
-        # symkey = strip_text(symkey)
-
+        symkey = request.content.read(172)
+        # print symkey
+        iv = request.content.read(172)
+        # print iv
         d = self.dbpool.runQuery(
             "INSERT INTO File (OwnerPBoxId, FileName, IV, SymKey) VALUES (?, ?, ?, ?);",
-            (pboxid, filename, "IV HERE", "KEY HERE"));
+            (pboxid, filename, iv, symkey));
         d.addCallback(getFilePath_cb)
 
         return NOT_DONE_YET

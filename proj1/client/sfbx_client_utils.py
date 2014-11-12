@@ -54,11 +54,6 @@ class SafeBoxClient():
     # handleGetKey: handles getkey operations
     def handleGetKey(self, method):
         def handleGetKey_cb(response):
-            # print 'Response version:', response.version
-            # print 'Response code:', response.code
-            # print 'Response phrase:', response.phrase
-            # print 'Response headers:'
-            # print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
             defer.addCallback(method)
             response.deliverBody(DataPrinter(defer, "getkey"))
@@ -79,11 +74,6 @@ class SafeBoxClient():
     # handleGetTicket: handles getticket operations
     def handleGetTicket(self, method):
         def handleGetTicket_cb(response):
-            # print 'Response version: ', response.version
-            # print 'Response code: ', response.code
-            # print 'Response phrase: ', response.phrase
-            # print 'Response headers: '
-            # print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
             defer.addCallback(method)
             response.deliverBody(getTicket(defer, self.client_id))
@@ -119,11 +109,6 @@ class SafeBoxClient():
     # handleList: handles every list command
     def handleList(self, line):
         def handleList_cb(response):
-            # print 'Response version:', response.version
-            # print 'Response code:', response.code
-            # print 'Response phrase:', response.phrase
-            # print 'Response headers:'
-            # print pformat(list(response.headers.getAllRawHeaders()))
             defer = Deferred()
             response.deliverBody(DataPrinter(defer, "list"))
             return NOT_DONE_YET
@@ -254,8 +239,12 @@ class SafeBoxClient():
             agent = Agent(reactor)
             dataq = []
             dataq.append(ticket)
-            dataq.append(crd[0])
-            dataq.append(crd[1])
+            dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key) )
+            dataq.append( self.client_id.encryptData(crd[1], self.client_id.pub_key) )
+            # print dataq[1]
+            # print len(dataq[1])
+            # print dataq[2]
+            # print len(dataq[2])
             enc_file = open("enc_file", 'r')
             body = _FileProducer(enc_file ,dataq)
             headers = http_headers.Headers()
