@@ -202,7 +202,7 @@ class Files(Resource):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'fileid' not specifeid."} }
 
-            if ('pboxid' not in request.args.keys()) & (error == None):
+            if ('ccid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
                           'message': "Argument 'pboxid' not specified."} }
 

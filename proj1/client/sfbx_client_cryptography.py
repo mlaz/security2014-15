@@ -36,7 +36,7 @@ class ClientIdentity(object):
         self.pub_key = RSA.importKey(file.read(), password)
         file.close()
 
-#        self.server_key = RSA.importKey(server_key)
+        self.server_key = RSA.importKey(server_key)
 
         self.signer = PKCS1_v1_5.new(self.priv_key)
         self.verifier = PKCS1_v1_5.new(self.pub_key)
