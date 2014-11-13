@@ -12,6 +12,8 @@ from pprint import pprint
 import json
 import os
 
+IV_KEY_SIZE_B64 = 172
+
 #
 # SafeBox server storage utilities API:
 # Provides facilities and utilities for preforming storage related operations
@@ -236,10 +238,10 @@ class SafeBoxStorage(object):
             else:
                 for row in data:
                     row_dict = {
-                        'OwnerPBoxId': row[0],
-                        'FileName': row[1],
-                        'IV': row[2],
-                        'SymKey': row[3],}
+                        'OwnerPBoxId': row[1],
+                        'FileName': row[2],
+                        'IV': row[3],
+                        'SymKey': row[4],}
                     reply_dict.update(row_dict)
 
             reply_dict = {'status': "OK", 'data': reply_dict}
@@ -277,6 +279,8 @@ class SafeBoxStorage(object):
                 request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
                 request.finish()
 
+            request.write(str(data[0][4]))
+            request.write(str(data[0][3]))
             file = open(file_path ,"r")
             sender = FileSender()
             sender.CHUNK_SIZE = 200
@@ -333,9 +337,9 @@ class SafeBoxStorage(object):
 
         filename = str(request.args['name'])
         filename = strip_text(filename)
-        symkey = request.content.read(172)
+        symkey = request.content.read(IV_KEY_SIZE_B64)
         # print symkey
-        iv = request.content.read(172)
+        iv = request.content.read(IV_KEY_SIZE_B64)
         # print iv
         d = self.dbpool.runQuery(
             "INSERT INTO File (OwnerPBoxId, FileName, IV, SymKey) VALUES (?, ?, ?, ?);",

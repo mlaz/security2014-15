@@ -15,6 +15,7 @@ import json
 from sfbx_decode_utils import *
 
 BSIZE = AES.block_size
+IV_KEY_SIZE_B64 = 172
 
 #
 # SafeBox client crypography utilities API:
@@ -89,14 +90,17 @@ class ClientIdentity(object):
 
     #encryptFileSym
     def decryptFileSym(self, src_file, dst_file, key, iv):
-        key = b64decode(key)
-        iv = b64decode(iv)
         cipher = AES.new(key, AES.MODE_OFB, iv)
-
+        src_file.seek(344, 0)
         enc_data = src_file.read(BSIZE)
+        cnt=0
         while(enc_data):
+            #print ':'.join(x.encode('hex') for x in enc_data)
+            cnt = cnt + len(enc_data)
+            print cnt
             data = cipher.decrypt(enc_data)
             data = data[:-ord(data[len(data)-1:])]
+            #print data
             dst_file.write(data)
             enc_data = src_file.read(BSIZE)
         src_file.close()

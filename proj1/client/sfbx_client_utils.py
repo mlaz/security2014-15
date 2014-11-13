@@ -17,8 +17,7 @@ from zope import interface
 import os
 import json
 
-from sfbx_client_cryptography import ClientIdentity
-from sfbx_client_cryptography import getTicket
+from sfbx_client_cryptography import *
 from sfbx_client_protocols import *
 from sfbx_fs_utils import _FileProducer
 
@@ -151,58 +150,6 @@ class SafeBoxClient():
 	    print "Error: invalid arguments!\n"
             print "Correct usage: list <pboxes|files>"
 
-    # handleGet: handles get file
-    def handleGet(self, line):
-        def printResult_cb(data):
-            pprint(data) #TODO: Format this!
-            return NOT_DONE_YET
-
-        def handleGet_cb(ticket):
-            s = line.split()
-            if s[1].lower() == "pboxinfo":
-                return self.handleGetMData(printResult_cb, ticket, s[2].lower())
-            else:
-                return self.handleGetFileMData(printResult_cb, ticket, s[2].lower())
-
-        def handleGetFile(signedTicket):
-            def handleGetFile_cb(response, f):
-                finished = Deferred()
-                cons = FileConsumer(f)
-                response.deliverBody(FileDownload(finished, cons))
-                return finished
-
-            agent = Agent(reactor)
-            body = FileBodyProducer(StringIO(signedTicket))
-            headers = http_headers.Headers()
-            d = agent.request(
-                    'GET',
-                    'http://localhost:8000/files/?method=getfile&ccid=' + self.ccid + '&fileid=' + fileId,
-                    headers,
-                    body)
-            f = open(fileId, "w")
-            d.addCallback(handleGetFile_cb, f)
-            return NOT_DONE_YET
-
-        s = line.split()
-        if len(s) == 2:
-            if s[1].lower() == "files":
-	        return self.handleGetTicket(handleListFiles)
-	    else:
-		print "Error: invalid arguments!\n"
-		print "Correct usage: get files"
-        elif len(s) == 3:
-            if s[1].lower() == "file":
-                fileId = s[2]
-                return self.handleGetTicket(handleGetFile)
-            elif s[1].lower() == "pboxinfo":
-                return self.handleGetTicket(handleGet_cb)
-            elif s[1].lower() == "fileinfo":
-                return self.handleGetTicket(handleGet_cb)
-            else:
-                print "Error: invalid arguments!\n"
-                print "Correct usage: get file <fileId> or get pboxinfo <PBox Owners CC Number>"
-        else:
-	    print "Error: invalid arguments!\n"
 
     # handleGetMData: Handles get pbox metadata operations.
     def handleGetMData(self, method, ticket, tgtccid):
@@ -248,6 +195,92 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
+    # handleGet: handles get file
+    def handleGet(self, line):
+        def printResult_cb(data):
+            pprint(data) #TODO: Format this!
+            return NOT_DONE_YET
+
+        # for info requests
+        def handleGetInfo_cb(ticket):
+            s = line.split()
+            if s[1].lower() == "pboxinfo":
+                return self.handleGetMData(printResult_cb, ticket, s[2].lower())
+            elif s[1].lower() == "fileinfo":
+                return self.handleGetFileMData(printResult_cb, ticket, s[2].lower())
+
+        # Decrypt and write the file
+        def writeFile(ignore):
+            print "Decrypting file..."
+            s = line.split()
+            enc_file = open(fileId, "r")
+            if len(s) == 4:
+                dec_file = open(s[3], "w")
+            else:
+                dec_file = open(fileId + "_decrypted", "r")
+
+            enc_key = enc_file.read(IV_KEY_SIZE_B64)
+            #print enc_key
+            key = self.client_id.decryptData(str(enc_key))
+            enc_iv = enc_file.read(IV_KEY_SIZE_B64)
+            #print enc_iv
+            iv = self.client_id.decryptData(str(enc_iv))
+            print len(iv)
+            print len(iv)
+            self.client_id.decryptFileSym(enc_file, dec_file, key, iv)
+            print "File written."
+
+        # for get file
+        def handleGetFile(signedTicket):
+            def handleGetFile_cb(response, f):
+                finished = Deferred()
+                finished.addCallback(writeFile)
+                cons = FileConsumer(f)
+                response.deliverBody(FileDownload(finished, cons))
+                print "Downloading file..."
+                return finished
+
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(signedTicket))
+            headers = http_headers.Headers()
+            d = agent.request(
+                    'GET',
+                    'http://localhost:8000/files/?method=getfile&ccid=' + self.ccid
+                + '&fileid=' + fileId,
+                    headers,
+                    body)
+            f = open(fileId, "w")
+            d.addCallback(handleGetFile_cb, f)
+            return NOT_DONE_YET
+
+        s = line.split()
+        if len(s) == 2:
+            if s[1].lower() == "files":
+	        return self.handleGetTicket(handleListFiles)
+	    else:
+		print "Error: invalid arguments!\n"
+		print "Correct usage: get files"
+        elif len(s) == 3:
+            #if s[1].lower() == "file":
+             #   fileId = s[2]
+              #  return self.handleGetTicket(handleGetFile)
+            if s[1].lower() == "pboxinfo":
+                return self.handleGetTicket(handleGetInfo_cb)
+            elif s[1].lower() == "fileinfo":
+                return self.handleGetTicket(handleGetInfo_cb)
+            else:
+                print "Error: invalid arguments!\n"
+                print "Correct usage: get file <fileId> or get pboxinfo <PBox Owners CC Number>"
+        elif len(s) == 4:
+            if s[1].lower() == "file":
+                fileId = s[2]
+                return self.handleGetTicket(handleGetFile)
+
+            else:
+                print "Error: invalid arguments!\n"
+                print "Correct usage: get file <fileId> <dest. filename on filesystem.>"
+        else:
+	    print "Error: invalid arguments!\n"
 
     # handlePutFile: handles file upload
     def handlePutFile(self, line):
@@ -262,7 +295,7 @@ class SafeBoxClient():
             print "HERE!!!!"
             s = line.split()
             file = open(s[2], 'r')
-            enc_file = open("enc_file", 'w')
+            enc_file = open("enc_fileout", 'w')
             crd = self.client_id.encryptFileSym(file, enc_file)
             agent = Agent(reactor)
             dataq = []

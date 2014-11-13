@@ -2,9 +2,11 @@ from twisted.internet import defer, reactor
 from twisted.web import iweb
 from zope import interface
 
+from base64 import b64encode
 from StringIO import StringIO
 
 CHUNK_SIZE = 200
+IV_KEY_SIZE_B64 = 172
 
 # The file test.mp3 was used for testing this module during development
 # it's at the files resource for this project on code.ua.pt
@@ -35,9 +37,9 @@ class _FileProducer(object):
             return
 
         if self.dataq is None:
-            data = self._file.read(self.chunksize)
+            data = b64encode(self._file.read(self.chunksize))
         else:
-            data = StringIO(self.dataq.pop(0)).read(self.chunksize)
+            data = StringIO(self.dataq.pop(0)).read(IV_KEY_SIZE_B64)
             if len(self.dataq) == 0:
                 self.dataq = None
 

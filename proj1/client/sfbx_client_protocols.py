@@ -7,15 +7,21 @@ from StringIO import StringIO
 import json
 
 from sfbx_decode_utils import *
+from sfbx_client_cryptography import IV_KEY_SIZE_B64
 
 # FileDownload:
 class FileDownload(Protocol):
     def __init__(self, finished, cons):
         self.finished = finished
         self.cons = cons
+        self.total = 0
 
     def dataReceived(self, data):
-        self.cons.write(data)
+        if self.total >= (2 * IV_KEY_SIZE_B64):
+            self.cons.write(b64decode(data))
+        else:
+            self.cons.write(data)
+        self.total = self.total + len(data)
 
     def connectionMade(self):
         self.cons.registerProducer(self, streaming=True)
