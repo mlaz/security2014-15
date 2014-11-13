@@ -217,16 +217,15 @@ class SafeBoxClient():
             if len(s) == 4:
                 dec_file = open(s[3], "w")
             else:
-                dec_file = open(fileId + "_decrypted", "r")
+                dec_file = open(fileId + "_decrypted", "w")
 
             enc_key = enc_file.read(IV_KEY_SIZE_B64)
-            #print enc_key
-            key = self.client_id.decryptData(str(enc_key))
+            print "debugging: iv key writefile"
+            print enc_key
+            key = self.client_id.decryptData(enc_key)
             enc_iv = enc_file.read(IV_KEY_SIZE_B64)
-            #print enc_iv
-            iv = self.client_id.decryptData(str(enc_iv))
-            print len(iv)
-            print len(iv)
+            print enc_iv
+            iv = self.client_id.decryptData(enc_iv)
             self.client_id.decryptFileSym(enc_file, dec_file, key, iv)
             print "File written."
 
@@ -302,10 +301,11 @@ class SafeBoxClient():
             dataq.append(ticket)
             dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key) )
             dataq.append( self.client_id.encryptData(crd[1], self.client_id.pub_key) )
-            # print dataq[1]
-            # print len(dataq[1])
-            # print dataq[2]
-            # print len(dataq[2])
+            print "debugging:key, iv putfile"
+            print dataq[1]
+            print len(dataq[1])
+            print dataq[2]
+            print len(dataq[2])
             enc_file = open("enc_file", 'r')
             body = _FileProducer(enc_file ,dataq)
             headers = http_headers.Headers()

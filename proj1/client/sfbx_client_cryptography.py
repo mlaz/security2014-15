@@ -15,6 +15,7 @@ import json
 from sfbx_decode_utils import *
 
 BSIZE = AES.block_size
+CHUNK_SIZE = 160
 IV_KEY_SIZE_B64 = 172
 
 #
@@ -37,7 +38,8 @@ class ClientIdentity(object):
         self.pub_key = RSA.importKey(file.read(), password)
         file.close()
 
-        self.server_key = RSA.importKey(server_key)
+        if server_key is not None: ## it only is None for testing purposes
+            self.server_key = RSA.importKey(server_key)
 
         self.signer = PKCS1_v1_5.new(self.priv_key)
         self.verifier = PKCS1_v1_5.new(self.pub_key)
@@ -76,33 +78,38 @@ class ClientIdentity(object):
 
         cipher = AES.new(key, AES.MODE_OFB, iv)
 
-        data = src_file.read(BSIZE)
+        data = src_file.read(CHUNK_SIZE)
+        cnt=0
         while(data):
-            if len(data) < BSIZE:
-                print "generating padding"
+            if len(data) % BSIZE is not 0:
                 data = data + (BSIZE - len(data) % BSIZE) * chr(BSIZE - len(data) % BSIZE)
+
+            print str(data)
             enc_data = cipher.encrypt(data)
+
             dst_file.write(enc_data)
-            data = src_file.read(BSIZE)
+            data = src_file.read(CHUNK_SIZE)
+            cnt = cnt + len(enc_data)
+            print cnt
         src_file.close()
         dst_file.close()
         return (key, iv)
 
-    #encryptFileSym
+    #decryptFileSym
     def decryptFileSym(self, src_file, dst_file, key, iv):
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        src_file.seek(344, 0)
-        enc_data = src_file.read(BSIZE)
+        enc_data = src_file.read(CHUNK_SIZE)
         cnt=0
         while(enc_data):
-            #print ':'.join(x.encode('hex') for x in enc_data)
             cnt = cnt + len(enc_data)
             print cnt
             data = cipher.decrypt(enc_data)
-            data = data[:-ord(data[len(data)-1:])]
-            #print data
+            print data
+            enc_data = src_file.read(CHUNK_SIZE)
+            if len(enc_data) == 0:
+                pad = ord(data[-1])
+                data = data[:-pad]
             dst_file.write(data)
-            enc_data = src_file.read(BSIZE)
         src_file.close()
         dst_file.close()
         return (key, iv)
