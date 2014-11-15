@@ -97,6 +97,7 @@ class TicketManager(object):
 
     #validateTicket: ticket must be base64 encoded
     def validateTicket(self,signature, pboxid, cli_key):
+        original = ""
         if pboxid in self.active_tickets.keys():
             self.active_tickets[pboxid]['timeout'].cancel()
             original = self.active_tickets[pboxid]['ticket']

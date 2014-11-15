@@ -84,13 +84,13 @@ class ClientIdentity(object):
             if len(data) % BSIZE is not 0:
                 data = data + (BSIZE - len(data) % BSIZE) * chr(BSIZE - len(data) % BSIZE)
 
-            print str(data)
+            #print str(data)
             enc_data = cipher.encrypt(data)
 
             dst_file.write(enc_data)
             data = src_file.read(CHUNK_SIZE)
             cnt = cnt + len(enc_data)
-            print cnt
+            #print cnt
         src_file.close()
         dst_file.close()
         return (key, iv)
@@ -102,9 +102,9 @@ class ClientIdentity(object):
         cnt=0
         while(enc_data):
             cnt = cnt + len(enc_data)
-            print cnt
+            #print cnt
             data = cipher.decrypt(enc_data)
-            print data
+            #print data
             enc_data = src_file.read(CHUNK_SIZE)
             if len(enc_data) == 0:
                 pad = ord(data[-1])

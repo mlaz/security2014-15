@@ -8,12 +8,12 @@ from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.protocols.ftp import FileConsumer
 from sfbx_client_protocols import FileDownload
+
 from base64 import b64encode, b64decode
 from StringIO import StringIO
 from pprint import pformat
 from pprint import pprint
 from zope import interface
-
 import os
 import json
 
@@ -71,10 +71,14 @@ class SafeBoxClient():
         return NOT_DONE_YET
 
     # handleGetTicket: handles getticket operations
-    def handleGetTicket(self, method):
+    def handleGetTicket(self, method, data=None):
         def handleGetTicket_cb(response):
             defer = Deferred()
-            defer.addCallback(method)
+            if data:
+                defer.addCallback(method, data)
+            else:
+                defer.addCallback(method)
+
             response.deliverBody(getTicket(defer, self.client_id))
             return NOT_DONE_YET
 
@@ -82,7 +86,8 @@ class SafeBoxClient():
         headers = http_headers.Headers()
         d = agent.request(
                 'GET',
-                'http://localhost:8000/session/?method=getticket&ccid='+ self.ccid,
+                'http://localhost:8000/session/?method=getticket&ccid='
+            + self.ccid,
             headers,
             None)
 
@@ -98,7 +103,8 @@ class SafeBoxClient():
         headers = http_headers.Headers()
         d = agent.request(
             'PUT',
-            'http://localhost:8000/pboxes/?method=register&ccid='+ self.ccid
+            'http://localhost:8000/pboxes/?method=register&ccid='
+            + self.ccid
             + '&name=' + name,
             headers,
             body)
@@ -119,7 +125,8 @@ class SafeBoxClient():
             headers = http_headers.Headers()
             d = agent.request(
                     'GET',
-                    'http://localhost:8000/pboxes/?method=list&ccid=' + self.ccid,
+                    'http://localhost:8000/pboxes/?method=list&ccid='
+                + self.ccid,
                 headers,
                 body)
             d.addCallback(handleList_cb)
@@ -131,7 +138,8 @@ class SafeBoxClient():
             headers = http_headers.Headers()
 	    d = agent.request(
                     'GET',
-                    'http://localhost:8000/files/?method=list&ccid=' + self.ccid,
+                    'http://localhost:8000/files/?method=list&ccid='
+                + self.ccid,
                 headers,
                 body)
             d.addCallback(handleList_cb)
@@ -174,10 +182,11 @@ class SafeBoxClient():
         return NOT_DONE_YET
 
         # handleGetFileMData: Handles get pbox metadata operations.
-    def handleGetFileMData(self, method, ticket, fileid):
+    def handleGetFileMData(self, ticket, data):
+        #data = (method, fileid)
         def handleGetFileMData_cb(response):
             defer = Deferred()
-            defer.addCallback(method)
+            defer.addCallback(data[0])
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
@@ -187,7 +196,7 @@ class SafeBoxClient():
         d = agent.request(
 			'GET',
             'http://localhost:8000/files/?method=get_mdata&ccid='
-            + self.ccid + "&fileid=" + fileid,
+            + self.ccid + "&fileid=" + data[1],
             headers,
             body)
 
@@ -207,7 +216,8 @@ class SafeBoxClient():
             if s[1].lower() == "pboxinfo":
                 return self.handleGetMData(printResult_cb, ticket, s[2].lower())
             elif s[1].lower() == "fileinfo":
-                return self.handleGetFileMData(printResult_cb, ticket, s[2].lower())
+                return self.handleGetFileMData(ticket,
+                                               (printResult_cb, s[2].lower()))
 
         # Decrypt and write the file
         def writeFile(ignore):
@@ -220,11 +230,11 @@ class SafeBoxClient():
                 dec_file = open(fileId + "_decrypted", "w")
 
             enc_key = enc_file.read(IV_KEY_SIZE_B64)
-            print "debugging: iv key writefile"
-            print enc_key
+            # print "debugging: iv key writefile"
+            # print enc_key
             key = self.client_id.decryptData(enc_key)
             enc_iv = enc_file.read(IV_KEY_SIZE_B64)
-            print enc_iv
+            #print enc_iv
             iv = self.client_id.decryptData(enc_iv)
             self.client_id.decryptFileSym(enc_file, dec_file, key, iv)
             print "File written."
@@ -281,17 +291,19 @@ class SafeBoxClient():
         else:
 	    print "Error: invalid arguments!\n"
 
-    # handlePutFile: handles file upload
-    def handlePutFile(self, line):
-        def printPutReply_cb(response):
-            print "FINISHED"
+    def printPutReply_cb(self,response):
+            print "Done."
 
             defer = Deferred()
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
+
+    # handlePutFile: handles file upload
+    def handlePutFile(self, line):
+
         def putFile_cb(ticket):
-            print "HERE!!!!"
+            print "Encrypting file..."
             s = line.split()
             file = open(s[2], 'r')
             enc_file = open("enc_fileout", 'w')
@@ -301,12 +313,13 @@ class SafeBoxClient():
             dataq.append(ticket)
             dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key) )
             dataq.append( self.client_id.encryptData(crd[1], self.client_id.pub_key) )
-            print "debugging:key, iv putfile"
-            print dataq[1]
-            print len(dataq[1])
-            print dataq[2]
-            print len(dataq[2])
-            enc_file = open("enc_file", 'r')
+            # print "debugging:key, iv putfile"
+            # print dataq[1]
+            # print len(dataq[1])
+            # print dataq[2]
+            # print len(dataq[2])
+            print "Uploading file..."
+            enc_file = open("enc_fileout", 'r')
             body = _FileProducer(enc_file ,dataq)
             headers = http_headers.Headers()
             d = agent.request(
@@ -315,10 +328,9 @@ class SafeBoxClient():
                 + self.ccid + "&name=" + os.path.basename(s[2]),
                 headers,
                 body)
-            d.addCallback(printPutReply_cb)
+            d.addCallback(self.printPutReply_cb)
 
             return NOT_DONE_YET
-
 
         s = line.split()
         if len(s) != 3:
@@ -335,9 +347,72 @@ class SafeBoxClient():
 
         return self.handleGetTicket(putFile_cb)
 
-
+    #handles update commands
     def handleUpdate(self, line):
-        return
+        def updateFile_cb(ticket, iv):
+            #data = (key,)
+            print "Updating file..."
+            s = line.split()
+            agent = Agent(reactor)
+            dataq = []
+            dataq.append(ticket)
+            dataq.append( iv )
+            # print "debugging:ticket, iv updatefile"
+            # print dataq[0]
+            # print dataq[1]
+            # print len(dataq[1])
+            print "Uploading file..."
+            enc_file = open("enc_fileout", 'r')
+            body = _FileProducer(enc_file ,dataq)
+            headers = http_headers.Headers()
+            d = agent.request(
+                'POST',
+                'http://localhost:8000/files/?method=updatefile&ccid='
+                + self.ccid + "&name=" + os.path.basename(s[3]) + "&fileid=" + s[2] ,
+                headers,
+                body)
+            d.addCallback(self.printPutReply_cb)
+
+            return NOT_DONE_YET
+
+        def encryptFile_cb(data):
+            s = line.split()
+            #pprint(data)
+	    if isinstance(data, basestring):
+		print data
+                return
+
+            print "Encrypting file..."
+            #print data["data"]["SymKey"]
+            enc_key = data["data"]["SymKey"]
+            key = self.client_id.decryptData(enc_key, self.client_id.priv_key)
+            #print len(key)
+            file = open(s[3], 'r')
+            enc_file = open("enc_fileout", 'w')
+            crd = self.client_id.encryptFileSym(file, enc_file, key=key)
+
+            new_iv =  self.client_id.encryptData(crd[1], self.client_id.pub_key)
+            return self.handleGetTicket(updateFile_cb, new_iv)
+
+
+        s = line.split()
+        if len(s) == 4:
+            if not os.path.exists(s[3]):
+                print "Error: File " + s[3] + " does not exist.\n"
+                return
+            hfmd_data = (encryptFile_cb, s[2])
+            return self.handleGetTicket(self.handleGetFileMData, hfmd_data)
+
+        else:
+            if s[1].lower() !="file":
+                print "Error: invalid arguments!\n"
+                print "Usage: update <file|share> <fileid|shareid> <local file path>"
+                return
+            elif not os.path.exists(s[2]):
+                print "Error: File " + s[2] + " does not exist.\n"
+                return
+
+
 
     def handleDelete(self, line):
         return

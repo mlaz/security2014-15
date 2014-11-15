@@ -36,6 +36,8 @@ class FD2FileProducer(object):
 
     def __init__(self, request, chunksize=200):
         self._file = request.content
+        if self._file is None:
+            print "ERROR!!!"
         self._request = request
         self._consumer = self._deferred = self._delayedProduce = None
         self._paused = False
@@ -243,8 +245,8 @@ class SafeBoxStorage(object):
                         'IV': row[3],
                         'SymKey': row[4],}
                     reply_dict.update(row_dict)
+                reply_dict = {'status': "OK", 'data': reply_dict}
 
-            reply_dict = {'status': "OK", 'data': reply_dict}
             request.write(json.dumps(reply_dict, encoding="utf-8"));
             request.finish()
 
@@ -348,25 +350,36 @@ class SafeBoxStorage(object):
 
         return NOT_DONE_YET
 
-    ####################### WIP ################################
-
     # updateFile(): This method handles updatefile method.
     # This is done in 3 steps:
-    # 1 - Inserts entry on the Files table;
-    # 2 - Queries for the new file's Id;
-    # 3 - Write file to disk
+    # 1 - Updates entry on the Files table;
+    # 2 - Write file to disk
     def updateFile(self, request, pboxid):
         #    pprint(request.__dict__)
         def finishRequest_cb(ignore,file):
             file.close()
+            reply_dict = { 'status': "OK" }
+            print ""
+            request.write(json.dumps(reply_dict, sort_keys=True, encoding="utf-8"))
             request.finish()
+            return
+
 
         # TODO: we shoud try a way of rollback
         #  if anything goes wrong at this point
         # This method should start writing the file to the disk.
         def writeFile_cb(data):
+            if len(data) != 0:
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "File unreachable."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+                return
+
             # path = <OwnerPBoxId>/<FileId>
-            file = open(str(pboxid) + "/" + str(data[0][0]) ,"w")
+            # fileid = str(request.args['fileid'])
+            # fileid = strip_text(fileid)
+            file = open(str(pboxid) + "/" + fileid ,"w")
             prod = FD2FileProducer(request)
             cons = FileConsumer(file)
             cons.registerProducer(prod, True)
@@ -375,42 +388,25 @@ class SafeBoxStorage(object):
 
             return NOT_DONE_YET
 
-        # This query should retreive the highest file number for a given pboxid
-        def getFilePath_cb(data):
-            # pboxid = str(request.args['pboxid'])
-            # pboxid = strip_text(pboxid)
-            d = self.dbpool.runQuery(
-                "SELECT FileId " +
-                "FROM File " +
-                "WHERE OwnerPBoxId = ? " +
-                "ORDER BY FileId DESC",
-                (pboxid,))
-            d.addCallback(writeFile_cb)
-
-            return NOT_DONE_YET
-
-        #
         filename = str(request.args['name'])
         filename = strip_text(filename)
-        iv = str(request.args['iv'])
-        iv = strip_text(iv)
-        symkey = str(request.args['key'])
-        symkey = strip_text(symkey)
+        fileid = str(request.args['fileid'])
+        fileid = strip_text(fileid)
+        iv = request.content.read(IV_KEY_SIZE_B64)
 
-        if os.path.exists(file_path) == True:
+        if os.path.exists(str(pboxid) + "/" + fileid) == True:
             df = self.dbpool.runQuery(
-                "SELECT FileId, OwnerPBoxId " +
-                "FROM File " +
-                "WHERE FileId = ? AND OwnerPBoxId = ? " +
-                "ORDER BY FileId DESC",
-                (fileid, pboxid))
-            df.addCallback(checkAndDelete)
+                "UPDATE File " +
+                "SET IV = ?, FileName = ? " +
+                "WHERE FileId = ? AND OwnerPBoxId = ? ",
+                (iv, filename, fileid, pboxid))
+            df.addCallback(writeFile_cb)
             return NOT_DONE_YET
-
-        # the file does not exist on fs.
-        #write some error msg "
-        request.finish() #instead of this return error
-    ####################### /WIP ################################
+        else:
+            error = { 'status': {'error': "Invalid Request",
+                        'message': "File does not exist."} }
+            request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+            request.finish()
 
     #TODO add some error handling to file I/O operations
     #deleteFile: Checks if a given file exists on fs and db then deletes it.

@@ -18,7 +18,7 @@ class FileDownload(Protocol):
 
     def dataReceived(self, data):
         if self.total >= (2 * IV_KEY_SIZE_B64):
-            self.cons.write(b64decode(data))
+            self.cons.write(data) #b64decode
         else:
             self.cons.write(data)
         self.total = self.total + len(data)

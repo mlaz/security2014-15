@@ -241,6 +241,7 @@ class Files(Resource):
     # 'method' = "updatefile"
     # 'ccid' = <user's ccid>
     # 'fileid' = <the file id>
+    # 'file' = <the file's new name>
     def render_POST(self, request):
         error = None;
         if 'method' not in request.args.keys():
@@ -249,7 +250,7 @@ class Files(Resource):
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
         # putfile:
-        if request.args['method'] == ['putfile']:
+        if request.args['method'] == ['updatefile']:
             if ('ccid' not in request.args.keys()):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'ccid' not specified."} }
@@ -258,18 +259,14 @@ class Files(Resource):
                 error = { 'status': {'error': "Invalid Request",
                           'message': "Argument 'name' not specified."} }
 
-            if ('iv' not in request.args.keys()) & (error == None):
+            if ('fileid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
-                          'message': "Argument 'iv' not specified."} }
+                          'message': "Argument 'id' not specified."} }
 
-            if ('key' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                          'message': "Argument 'key' not specified."} }
 
-            print request.args['method']
             if error is None:
                 return handler.handleUpdateFile(request)
-
+        print request.args['method']
 
         error = { 'status': {'error': "Invalid Request",
                 'message': "Unknown method for this resource."} }

@@ -23,7 +23,7 @@ class _FileProducer(object):
         self.dataq = dataq
 
     def startProducing(self, consumer):
-        print "START"
+#        print "START"
         self._consumer = consumer
         self._deferred = defer.Deferred()
         reactor.callLater(0, self._produceSome)
@@ -37,7 +37,7 @@ class _FileProducer(object):
             return
 
         if self.dataq is None:
-            data = b64encode(self._file.read(self.chunksize))
+            data = self._file.read(self.chunksize) #b64encode
         else:
             data = StringIO(self.dataq.pop(0)).read(IV_KEY_SIZE_B64)
             if len(self.dataq) == 0:
@@ -47,27 +47,27 @@ class _FileProducer(object):
             self._consumer.write(data)
             self._scheduleSomeProducing()
         else:
-            print "FINISHED0"
+ #           print "FINISHED0"
             self._file.close()
             if self._deferred is not None:
-                print "FINISHED0"
+  #              print "FINISHED0"
                 self._deferred.callback(None)
                 self._deferred = None
 
     def pauseProducing(self):
-        print "PAUSE"
+     #   print "PAUSE"
         self._paused = True
         if self._delayedProduce is not None:
             self._delayedProduce.cancel()
 
     def resumeProducing(self):
-        print "RESUME"
+    #    print "RESUME"
         self._paused = False
         if self._deferred is not None:
             self._scheduleSomeProducing()
 
     def stopProducing(self):
-        print "STOP"
+   #     print "STOP"
         if self._delayedProduce is not None:
             self._delayedProduce.cancel()
         self._deferred = None
