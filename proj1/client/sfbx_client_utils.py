@@ -236,6 +236,7 @@ class SafeBoxClient():
             enc_iv = enc_file.read(IV_KEY_SIZE_B64)
             #print enc_iv
             iv = self.client_id.decryptData(enc_iv)
+            print iv
             self.client_id.decryptFileSym(enc_file, dec_file, key, iv)
             print "File written."
 
@@ -305,8 +306,9 @@ class SafeBoxClient():
             agent = Agent(reactor)
             dataq = []
             dataq.append(ticket)
-            dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key) )
-            dataq.append( self.client_id.encryptData(crd[1], self.client_id.pub_key) )
+            dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key))
+            dataq.append( self.client_id.encryptData(crd[1]) )
+            print crd[1]
             # print "debugging:key, iv putfile"
             # print dataq[1]
             # print len(dataq[1])
@@ -385,7 +387,7 @@ class SafeBoxClient():
             enc_file = open("enc_fileout", 'w')
             crd = self.client_id.encryptFileSym(file, enc_file, key=key)
 
-            new_iv =  self.client_id.encryptData(crd[1], self.client_id.pub_key)
+            new_iv =  self.client_id.encryptData(crd[1])
             return self.handleGetTicket(updateFile_cb, new_iv)
 
 
