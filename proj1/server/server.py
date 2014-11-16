@@ -385,9 +385,7 @@ class Shares(Resource):
             pprint(request.__dict__)
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        return NOT_DONE_YET
-
-    # POST Methods:
+    # PUT Methods:
     #
     # sharefile: To share a file.
     # 'method' = "sharefile"
@@ -405,9 +403,9 @@ class Shares(Resource):
 
         # sharefile:
         if request.args['method'] == ['sharefile']:
-            if ('ruserid' not in request.args.keys()) & (error == None):
+            if ('ccid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'ruserid' not specified."} }
+                         'message': "Argument 'ccid' not specified."} }
 
             if 'fileid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
@@ -417,8 +415,13 @@ class Shares(Resource):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'rccid' not specified."} }
 
-            print request.args['method']
+            if (request.args['rccid'] == request.args['ccid']) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Arguments 'rccid' and 'ccid' must be different."} }
 
+            print request.args['method']
+            if error == None:
+                return handler.handleShareFile(request)
         else:
             error = { 'status': {'error': "Invalid Request",
                      'message': "Unknown method for this resource."} }
@@ -426,10 +429,6 @@ class Shares(Resource):
         if error != None:
             pprint(request.__dict__)
             return json.dumps(error, sort_keys=True, encoding="utf-8")
-
-        newdata = request.content.getvalue()
-        print newdata
-        return NOT_DONE_YET
 
     # POST Methods:
     #

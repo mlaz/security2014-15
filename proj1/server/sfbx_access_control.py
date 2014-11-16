@@ -163,3 +163,6 @@ class AccessCtrlHandler(object):
 
     # Handling Share resource related operations:
     #
+
+    def handleShareFile(self, request):
+        return self.handleValidation(request, self.storage.shareFile)

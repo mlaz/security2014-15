@@ -35,7 +35,6 @@ CREATE TABLE [Share]
     [FileId] INTEGER  NOT NULL,
     [ForeignPBoxId] INTEGER  NOT NULL,
     [SymKey] TEXT NOT NULL,
-    [IV] TEXT NOT NULL,
     [Writeable] INTEGER  DEFAULT 0,
     CONSTRAINT [PK_Share] PRIMARY KEY  ([FileId], [ForeignPBoxId]),
     FOREIGN KEY ([FileId]) REFERENCES [File] ([FileId])

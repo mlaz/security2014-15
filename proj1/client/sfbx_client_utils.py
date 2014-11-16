@@ -160,10 +160,12 @@ class SafeBoxClient():
 
 
     # handleGetMData: Handles get pbox metadata operations.
-    def handleGetMData(self, method, ticket, tgtccid):
+    def handleGetMData(self, ticket, data):
+        #data = (method, tgtccid)
+        pprint(data)
         def handleGetMData_cb(response):
             defer = Deferred()
-            defer.addCallback(method)
+            defer.addCallback(data[0])
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
@@ -173,7 +175,7 @@ class SafeBoxClient():
         d = agent.request(
 			'GET',
             'http://localhost:8000/pboxes/?method=get_mdata&ccid='
-            + self.ccid + "&tgtccid=" + tgtccid,
+            + self.ccid + "&tgtccid=" + data[1],
             headers,
             body)
 
@@ -214,7 +216,8 @@ class SafeBoxClient():
         def handleGetInfo_cb(ticket):
             s = line.split()
             if s[1].lower() == "pboxinfo":
-                return self.handleGetMData(printResult_cb, ticket, s[2].lower())
+                return self.handleGetMData(ticket,
+                                               (printResult_cb, s[2].lower()))
             elif s[1].lower() == "fileinfo":
                 return self.handleGetFileMData(ticket,
                                                (printResult_cb, s[2].lower()))
@@ -286,6 +289,7 @@ class SafeBoxClient():
         else:
 	    print "Error: invalid arguments!\n"
 
+    # printPutReply_cb: prints put and update responses
     def printPutReply_cb(self,response):
             print "Done."
 
@@ -308,7 +312,7 @@ class SafeBoxClient():
             dataq.append(ticket)
             dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key))
             dataq.append( self.client_id.encryptData(crd[1]) )
-            print crd[1]
+            #print crd[1]
             # print "debugging:key, iv putfile"
             # print dataq[1]
             # print len(dataq[1])
@@ -409,7 +413,7 @@ class SafeBoxClient():
                 return
 
 
-
+    # handleDelete: handles delete commands
     def handleDelete(self, line):
         def printDeleteReply_cb(data):
             if not data:
@@ -445,3 +449,52 @@ class SafeBoxClient():
                 return
 
         return
+
+    def handleShare(self, line):
+
+        def getFKey_cb(data):
+            enc_key = data["data"]["SymKey"]
+
+            def getDstKey_cb(data):
+                dstkey = data["data"]["PubKey"]
+                print "pubkey" + dstkey
+
+                def shareFile_cb(ticket):
+                    agent = Agent(reactor)
+                    dataq = []
+                    dataq.append(ticket)
+                    dataq.append(enc_sym_key)
+                    print "Uploading symkey..."
+                    body = _FileProducer(StringIO("") ,dataq)
+                    headers = http_headers.Headers()
+                    d = agent.request(
+                        'PUT',
+                        'http://localhost:8000/shares/?method=sharefile&ccid='
+                        + self.ccid + "&rccid=" + s[3] + "&fileid=" + s[2],
+                        headers,
+                        body)
+                    d.addCallback(self.printPutReply_cb)
+
+                    return d
+
+                #enc_key = data["data"]["SymKey"]
+                sym_key = self.client_id.decryptData(enc_key, self.client_id.priv_key)
+                dstkey = RSA.importKey(dstkey)
+                enc_sym_key = self.client_id.encryptData(sym_key, dstkey)
+                return self.handleGetTicket(shareFile_cb, None)
+
+
+
+            hfmd_data = (getDstKey_cb, s[3].lower())
+            return self.handleGetTicket(self.handleGetMData, hfmd_data)
+
+        s = line.split()
+        if len(s) == 4:
+            hmd_data = (getFKey_cb, s[2].lower())
+            return self.handleGetTicket(self.handleGetFileMData, hmd_data)
+
+        else:
+            if s[1].lower() != "file":
+                print "Error: invalid arguments!\n"
+                print "Usage: share file <fileid> <recipient's ccid>"
+                return

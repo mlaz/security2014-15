@@ -158,8 +158,8 @@ class SafeBoxStorage(object):
                     row_dict = {
                         'PBoxId': row[0],
                         'UserCCId': row[1],
-                        'UserName': row[2],
-                        'PubKey': row[3],}
+                        'UserName': row[3],
+                        'PubKey': row[2],}
                     reply_dict.update(row_dict)
 
             reply_dict = {'status': "OK", 'data': reply_dict}
@@ -365,7 +365,6 @@ class SafeBoxStorage(object):
         def finishRequest_cb(ignore,file):
             file.close()
             reply_dict = { 'status': "OK" }
-            print ""
             request.write(json.dumps(reply_dict, sort_keys=True, encoding="utf-8"))
             request.finish()
             return
@@ -462,18 +461,22 @@ class SafeBoxStorage(object):
 
 # Share related operations:
 #
-    def shareFile(self, pboxid, pubkey):
+    def shareFile(self, request, pboxid, pubkey):
         fileid = str(request.args['fileid'])
         fileid = strip_text(fileid)
+        rccid = str(request.args['rccid'])
+        rccid = strip_text(rccid)
         file_path = str(pboxid) + "/" + fileid
 
-        # 3 - Deleting the file.
-        def deleteAndFinish_cb(ignored):
-            os.remove(file_path)
+        # 3 - Writing feedback
+        def writereply_cb(ignored):
+            reply_dict = { 'status': "OK" }
+            request.write(json.dumps(reply_dict, sort_keys=True, encoding="utf-8"))
             request.finish()
+            return
 
         # 2 - Deleting table entry for referenced file if the file exists.
-        def checkAndDelete_cb(data):
+        def checkAndShare_cb(data):
             if len(data) == 0:
                 error = { 'status': {'error': "Invalid Request",
                         'message': "File does not exist."} }
@@ -481,12 +484,13 @@ class SafeBoxStorage(object):
                 request.finish()
 
             else:
+                symkey = request.content.read(IV_KEY_SIZE_B64)
                 df = self.dbpool.runQuery(
-                    "DELETE " +
-                    "FROM File " +
-                    "WHERE FileId = ? AND OwnerPBoxId = ? ",
-                    (fileid, pboxid))
-                df.addCallback(deleteAndFinish_cb)
+                    "INSERT " +
+                    "Into Share (FileId, ForeignPBoxId, Symkey, Writeable) " +
+                    "VALUES ( ?, (SELECT PBoxID FROM PBox WHERE UserCCId = ?), ?, 0)",
+                    (fileid, rccid, symkey))
+                df.addCallback(writereply_cb)
 
         # 1 - Checking if the file exists.
         if os.path.exists(file_path) == True:
@@ -496,7 +500,7 @@ class SafeBoxStorage(object):
                 "WHERE FileId = ? AND OwnerPBoxId = ? " +
                 "ORDER BY FileId DESC",
                 (fileid, pboxid))
-            df.addCallback(checkAndDelete_cb)
+            df.addCallback(checkAndShare_cb)
             return NOT_DONE_YET
 
         # the file does not exist on fs.

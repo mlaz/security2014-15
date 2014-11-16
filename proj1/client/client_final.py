@@ -30,6 +30,8 @@ class CommandReceiver(basic.LineReceiver):
             return client.handleUpdate(line)
         elif method == "delete":
             return client.handleDelete(line)
+        elif method == "share":
+            return client.handleShare(line)
         #for test purposes only
         elif method == "getkey":
             return client.handleGetKey()
