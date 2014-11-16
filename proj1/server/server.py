@@ -393,8 +393,8 @@ class Shares(Resource):
     # 'method' = "sharefile"
     # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'fileid' = <the file id>
-    # 'ruserid' = <recipient's user id> TODO: define what this is!
-    def render_POST(self, request):
+    # 'rccid' = <recipient's user id> TODO: define what this is!
+    def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",
@@ -405,13 +405,17 @@ class Shares(Resource):
 
         # sharefile:
         if request.args['method'] == ['sharefile']:
+            if ('ruserid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ruserid' not specified."} }
+
             if 'fileid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'fileid' not specified."} }
 
-            if ('ruserid' not in request.args.keys()) & (error == None):
+            if ('rccid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'ruserid' not specified."} }
+                         'message': "Argument 'rccid' not specified."} }
 
             print request.args['method']
 
@@ -427,7 +431,7 @@ class Shares(Resource):
         print newdata
         return NOT_DONE_YET
 
-    # PUT Methods:
+    # POST Methods:
     #
     # updateshare: To update a share (ex.: change write permissions).
     # 'method' = "updateshare"
@@ -441,7 +445,7 @@ class Shares(Resource):
     # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'method' = "updatesfile"
     # 'fileid' = <the file id>
-    def render_PUT(self, request):
+    def render_POST(self, request):
         error = None;
         if 'method' not in request.args.keys():
             error = { 'status': {'error': "Invalid Request",

@@ -220,8 +220,7 @@ class SafeBoxClient():
                                                (printResult_cb, s[2].lower()))
 
         # Decrypt and write the file
-        def writeFile(ignore):
-            print "Decrypting file..."
+        def writeFile(ignore): #we should implement http error code checking
             s = line.split()
             enc_file = open(fileId, "r")
             if len(s) == 4:
@@ -232,6 +231,7 @@ class SafeBoxClient():
             enc_key = enc_file.read(IV_KEY_SIZE_B64)
             # print "debugging: iv key writefile"
             # print enc_key
+            print "Decrypting file..."
             key = self.client_id.decryptData(enc_key)
             enc_iv = enc_file.read(IV_KEY_SIZE_B64)
             #print enc_iv
@@ -263,13 +263,7 @@ class SafeBoxClient():
             return NOT_DONE_YET
 
         s = line.split()
-        if len(s) == 2:
-            if s[1].lower() == "files":
-	        return self.handleGetTicket(handleListFiles)
-	    else:
-		print "Error: invalid arguments!\n"
-		print "Correct usage: get files"
-        elif len(s) == 3:
+        if len(s) == 3:
             #if s[1].lower() == "file":
              #   fileId = s[2]
               #  return self.handleGetTicket(handleGetFile)
@@ -415,4 +409,37 @@ class SafeBoxClient():
 
 
     def handleDelete(self, line):
+        def printDeleteReply_cb(data):
+            if not data:
+                print "Done."
+            else:
+                pprint(data)
+
+        def deleteFile_cb(ticket):
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(ticket))
+            headers = http_headers.Headers()
+            d = agent.request(
+                'DELETE',
+                'http://localhost:8000/files/?method=delete&ccid='
+                + self.ccid + "&fileid=" + s[2],
+                headers,
+                body)
+
+            d.addCallback(printDeleteReply_cb)
+
+
+        s = line.split()
+        if len(s) == 3:
+            return self.handleGetTicket(deleteFile_cb)
+
+        else:
+            if s[1].lower() !="file":
+                print "Error: invalid arguments!\n"
+                print "Usage: delete <file|share> <fileid|shareid>"
+                return
+            elif not os.path.exists(s[2]):
+                print "Error: File " + s[2] + " does not exist.\n"
+                return
+
         return

@@ -267,12 +267,12 @@ class SafeBoxStorage(object):
 
         # getFile_cb(): Callback for getFile(), sends the file back to the client.
         def getFile_cb(data):
-            if not data:
+            if len(data) == 0:
                 error = { 'status': {'error': "Invalid Request",
                                      'message': "File does not exist."} }
                 request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
                 request.finish()
-
+                return
 
             file_path = str(data[0][1]) + "/" + str(data[0][0])
             if not os.path.exists(file_path):
@@ -413,7 +413,7 @@ class SafeBoxStorage(object):
     def deleteFile(self, request, pboxid):
         fileid = str(request.args['fileid'])
         fileid = strip_text(fileid)
-        file_path = pboxid + "/" + fileid
+        file_path = str(pboxid) + "/" + fileid
 
         # 3 - Deleting the file.
         def deleteAndFinish_cb(ignored):
