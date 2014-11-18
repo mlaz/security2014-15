@@ -179,5 +179,9 @@ class AccessCtrlHandler(object):
     def handleUpdateShared(self, request):
         return self.handleValidation(request, self.storage.updateShared)
 
+    def handleUpdateSharePerm(self, request):
+        return self.handleValidation(request, self.storage.updateSharePerm)
+
+
     def handleDeleteShare(self, request):
         return self.handleValidation(request, self.storage.deleteShare)

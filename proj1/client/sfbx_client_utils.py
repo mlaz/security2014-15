@@ -495,9 +495,33 @@ class SafeBoxClient():
                 return self.handleGetTicket(updateShared_cb, new_iv)
             return self.handleGetTicket(updateFile_cb, new_iv)
 
+        def updateSharePerm(ticket):
+            s = line.split()
+            agent = Agent(reactor)
+            body = _FileProducer(StringIO(ticket))
+            headers = http_headers.Headers()
+            d = agent.request(
+                'POST',
+                'http://localhost:8000/shares/?method=updateshareperm&ccid='
+                + self.ccid + "&rccid=" + s[3] + "&fileid=" + s[2] + "&writeable=" + s[4] ,
+                headers,
+                body)
+            d.addCallback(self.printPutReply_cb)
+
+            return NOT_DONE_YET
+
 
         s = line.split()
-        if len(s) == 4:
+
+        if len(s) == 5:
+            if s[1] == "shareperm":
+                return self.handleGetTicket(updateSharePerm)
+                print "Error: invalid arguments!\n"
+                print "Usage: update shareperm <fileid> <rccid> <true>"
+                return
+
+
+        elif len(s) == 4:
             if not os.path.exists(s[3]):
                 print "Error: File " + s[3] + " does not exist.\n"
                 return

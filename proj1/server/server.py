@@ -474,6 +474,8 @@ class Shares(Resource):
     # 'rccid' = <recipient's user ccid> TODO: define what this is!
     # 'writeable' = <the new value, true or false>
     #
+    # updatshareperm: read the source
+    #
     # updateshared: To update (modify) a shared file.
     # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'method' = "updatesfile"
@@ -485,10 +487,9 @@ class Shares(Resource):
                      'message': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        pprint(request.__dict__)
 
-        # updatewriteperm:
-        if request.args['method'] == ['updateshare']:
+        # updatshareperm:
+        if request.args['method'] == ['updateshareperm']:
             if 'fileid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'fileid' not specified."} }
@@ -506,7 +507,8 @@ class Shares(Resource):
                          'message': "Argument 'newval' not specified."} }
 
             if error == None:
-                return handler.handleUpdateWritePerm(request)
+                print request.args['method']
+                return handler.handleUpdateSharePerm(request)
 
             print request.args['method']
 

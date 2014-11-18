@@ -488,7 +488,7 @@ class SafeBoxStorage(object):
                 df = self.dbpool.runQuery(
                     "INSERT " +
                     "Into Share (FileId, ForeignPBoxId, Symkey, Writeable) " +
-                    "VALUES ( ?, (SELECT PBoxID FROM PBox WHERE UserCCId = ?), ?, 1)",
+                    "VALUES ( ?, (SELECT PBoxID FROM PBox WHERE UserCCId = ?), ?, 0)",
                     (fileid, rccid, symkey))
                 df.addCallback(writereply_cb)
 
@@ -664,39 +664,67 @@ class SafeBoxStorage(object):
 
     # updateSharePerm(): Updates write permissions for a shared file
     def updateSharePerm(self, request, pboxid, pubkey):
-        return
-        # # updateSharePerm_cb(): Callback for updateSharePerm(), Processes retrieved data for response.
-        # def updateSharePerm_cb (data):
-        #     reply_dict = {}
-        #     if len(data) == 0:
-        #         reply_dict = { 'status': {'error': "Invalid Input", 'message': "File unreachable."} }
-        #     else:
-        #         df = self.dbpool.runQuery(
-        #         "UPDATE Share " +
-        #         "SET IV = ?, FileName = ? " +
-        #         "WHERE FileId = ? AND PBoxId = ? ",
-        #         (iv, filename, fileid, pboxid))
-        #     request.write(json.dumps(reply_dict, encoding="utf-8"));
-        #     request.finish()
+        fileid = str(request.args['fileid'])
+        fileid = strip_text(fileid)
+        rccid = str(request.args['rccid'])
+        rccid = strip_text(rccid)
 
-        # fileid = str(request.args['fileid'])
-        # fileid = strip_text(fileid)
-        # rccid = str(request.args['rccid'])
-        # rccid = strip_text(rccid)
-        # writeable = str(request.args['writeable'])
-        # writeable = strip_text(writable)
 
-        # if writeable == "true":
-        #     writeable = 1
-        # else:
-        #     writeable = 0
+        def finish_cb(ignored):
+            error = { 'status': "OK" }
+            request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+            request.finish()
+            return
 
-        # d = self.dbpool.runQuery(
-        #     "SELECT Share.ForeignPboxId, Share.Writeable " +
-        #     "FROM Share JOIN File ON File.FileId = Share.FileId " +
-        #     "AND Share.FileID = ? AND Share.ForeignPBoxId = ? AND File.OwnerPBoxId"w, (fileid,pboxid));
-        # d.addCallback(updateSharePerm_cb)
-        # return NOT_DONE_YET
+        # 3 - updating table entry for referenced share if the file exists.
+        def checkAndUpdate_cb(data):
+            if len(data) == 0:
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "User not found."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+                return
+
+            else:
+                writeable = str(request.args['writeable'])
+                writeable = strip_text(writeable)
+                if writeable.lower() == "true":
+                    writeable = 1
+                else:
+                    writeable = 0
+
+                df = self.dbpool.runQuery(
+                    "UPDATE Share " +
+                    "SET Writeable = ? " +
+                    "WHERE FileId = ? AND ForeignPBoxId = ? ",
+                    (writeable, fileid, data[0][0]))
+                df.addCallback(finish_cb)
+
+        # 2 - getting dst's pboxid
+        def getDstPId_cb(data):
+            if len(data) == 0:
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "File not found."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+
+            else:
+                df = self.dbpool.runQuery(
+                    "SELECT PBoxId " +
+                    "FROM PBox " +
+                    "WHERE UserCCId = ? ",
+                    (rccid,))
+                df.addCallback(checkAndUpdate_cb)
+
+
+        # 1 - Checking if the user is the file owner
+        df = self.dbpool.runQuery(
+            "SELECT FileId, OwnerPBoxId " +
+            "FROM File " +
+            "WHERE FileId = ? AND OwnerPBoxId = ? ",
+            (fileid,pboxid))
+        df.addCallback(getDstPId_cb)
+        return NOT_DONE_YET
 
     #TODO add some error handling to file I/O operations
     #deleteFile: Checks if a given file exists on fs and db then deletes it.
@@ -707,7 +735,7 @@ class SafeBoxStorage(object):
         rccid = strip_text(rccid)
         file_path = str(pboxid) + "/" + str(fileid)
 
-        # 3 - Deleting the file.
+        # 3 - giving some feedback.
         def finish_cb(ignored):
             error = { 'status': "OK" }
             request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
