@@ -249,7 +249,7 @@ class Files(Resource):
                      'message': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        # putfile:
+        # updatefile:
         if request.args['method'] == ['updatefile']:
             if ('ccid' not in request.args.keys()):
                 error = { 'status': {'error': "Invalid Request",
@@ -428,13 +428,13 @@ class Shares(Resource):
 
         # sharefile:
         if request.args['method'] == ['sharefile']:
-            if ('ccid' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'ccid' not specified."} }
-
             if 'fileid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'fileid' not specified."} }
+
+            if ('ccid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not specified."} }
 
             if ('rccid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
@@ -462,10 +462,9 @@ class Shares(Resource):
     # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'fileid' = <the file id>
     # 'rccid' = <recipient's user ccid> TODO: define what this is!
-    # 'attrname' = <the share's attribute to change>
-    # 'newval' = <the new value>
+    # 'writeable' = <the new value, true or false>
     #
-    # updatesfile: To update (modify) a shared file.
+    # updateshared: To update (modify) a shared file.
     # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
     # 'method' = "updatesfile"
     # 'fileid' = <the file id>
@@ -478,33 +477,46 @@ class Shares(Resource):
 
         pprint(request.__dict__)
 
-        # updateshare:
+        # updatewriteperm:
         if request.args['method'] == ['updateshare']:
             if 'fileid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'fileid' not specified."} }
 
-            if ('ruserid' not in request.args.keys()) & (error == None):
+            if ('ccid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'ruserid' not specified."} }
+                         'message': "Argument 'ccid' not specified."} }
 
-            if ('attrname' not in request.args.keys()) & (error == None):
+            if ('rccid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'attrname' not specified."} }
+                         'message': "Argument 'rccid' not specified."} }
 
-            if ('newval' not in request.args.keys()) & (error == None):
+            if ('writeable' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'newval' not specified."} }
 
+            if error == None:
+                return handler.handleUpdateWritePerm(request)
+
             print request.args['method']
 
-        # updatesfile:
-        elif request.args['method'] == ['updatesfile']:
-            if 'fileid' not in request.args.keys():
+        # updateshared:
+        elif request.args['method'] == ['updateshared']:
+            if ('ccid' not in request.args.keys()):
                 error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'fileid' not specified."} }
+                         'message': "Argument 'ccid' not specified."} }
 
+            if ('name' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'name' not specified."} }
+
+            if ('fileid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                          'message': "Argument 'id' not specified."} }
             print request.args['method']
+
+            if error == None:
+                return handler.handleUpdateShared(request)
 
         else:
             error = { 'status': {'error': "Invalid Request",

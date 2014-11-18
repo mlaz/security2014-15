@@ -488,7 +488,7 @@ class SafeBoxStorage(object):
                 df = self.dbpool.runQuery(
                     "INSERT " +
                     "Into Share (FileId, ForeignPBoxId, Symkey, Writeable) " +
-                    "VALUES ( ?, (SELECT PBoxID FROM PBox WHERE UserCCId = ?), ?, 0)",
+                    "VALUES ( ?, (SELECT PBoxID FROM PBox WHERE UserCCId = ?), ?, 1)",
                     (fileid, rccid, symkey))
                 df.addCallback(writereply_cb)
 
@@ -586,6 +586,118 @@ class SafeBoxStorage(object):
         d.addCallback(getShareMData_cb)
         return NOT_DONE_YET
 
+    # updateShare(): This method handles updateshare method.
+    # This is done in 3 steps:
+    # 1 - Checks if user has write permission;
+    # 2 - Updates entry on the Files table;
+    # 3 - Write shared file to disk
+    def updateShared(self, request, pboxid, pubkey):
+        #    pprint(request.__dict__)
+        def finishRequest_cb(ignore,file):
+            file.close()
+            reply_dict = { 'status': "OK" }
+            request.write(json.dumps(reply_dict, sort_keys=True, encoding="utf-8"))
+            request.finish()
+            return
+
+        # TODO: we shoud try a way of rollback
+        #  if anything goes wrong at this point
+        # This method should start writing the file to the disk.
+        def writeFile_cb(data, ownerid):
+            if len(data) != 0:
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "File unreachable."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+                return
+
+            # path = <OwnerPBoxId>/<FileId>
+            file = open(str(ownerid) + "/" + fileid ,"w")
+            prod = FD2FileProducer(request)
+            cons = FileConsumer(file)
+            cons.registerProducer(prod, True)
+            d = prod.startProducing(cons)
+            d.addCallback(finishRequest_cb, file)
+
+            return NOT_DONE_YET
+
+        def updateFileTable_cb(data):
+            if len(data) == 0:
+                print "HERE"
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "File unreachable."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+                return
+
+            if data[0][1] == 0: #checking if the user has permission for this
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "Permission denied."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+                return
+
+            filename = str(request.args['name'])
+            filename = strip_text(filename)
+            fileid = str(request.args['fileid'])
+            fileid = strip_text(fileid)
+            iv = request.content.read(IV_KEY_SIZE_B64)
+
+
+            df = self.dbpool.runQuery(
+                "UPDATE File " +
+                "SET IV = ?, FileName = ? " +
+                "WHERE FileId = ? AND OwnerPBoxId = ? ",
+                (iv, filename, fileid, data[0][0]))
+            df.addCallback(writeFile_cb, data[0][0])
+            return NOT_DONE_YET
+
+        fileid = str(request.args['fileid'])
+        fileid = strip_text(fileid)
+
+        df = self.dbpool.runQuery(
+            "SELECT File.OwnerPBoxId, Share.Writeable " +
+            "FROM Share JOIN File ON File.FileId = Share.FileId " +
+            "AND Share.FileID = ? AND Share.ForeignPBoxId = ?", (fileid,pboxid));
+        df.addCallback(updateFileTable_cb)
+        return NOT_DONE_YET
+
+    # updateSharePerm(): Queries the data base for  all
+    # File's attributes for given file id and owner pboxid.
+    def updateSharePerm(self, request, pboxid, pubkey):
+        return
+        # # updateSharePerm_cb(): Callback for updateSharePerm(), Processes retrieved data for response.
+        # def updateSharePerm_cb (data):
+        #     reply_dict = {}
+        #     if len(data) == 0:
+        #         reply_dict = { 'status': {'error': "Invalid Input", 'message': "File unreachable."} }
+        #     else:
+        #         df = self.dbpool.runQuery(
+        #         "UPDATE Share " +
+        #         "SET IV = ?, FileName = ? " +
+        #         "WHERE FileId = ? AND PBoxId = ? ",
+        #         (iv, filename, fileid, pboxid))
+        #     request.write(json.dumps(reply_dict, encoding="utf-8"));
+        #     request.finish()
+
+        # fileid = str(request.args['fileid'])
+        # fileid = strip_text(fileid)
+        # rccid = str(request.args['rccid'])
+        # rccid = strip_text(rccid)
+        # writeable = str(request.args['writeable'])
+        # writeable = strip_text(writable)
+
+        # if writeable == "true":
+        #     writeable = 1
+        # else:
+        #     writeable = 0
+
+        # d = self.dbpool.runQuery(
+        #     "SELECT Share.ForeignPboxId, Share.Writeable " +
+        #     "FROM Share JOIN File ON File.FileId = Share.FileId " +
+        #     "AND Share.FileID = ? AND Share.ForeignPBoxId = ? AND File.OwnerPBoxId"w, (fileid,pboxid));
+        # d.addCallback(updateSharePerm_cb)
+        # return NOT_DONE_YET
 
     # #TODO add some error handling to file I/O operations
     # #deleteFile: Checks if a given file exists on fs and db then deletes it.

@@ -432,7 +432,32 @@ class SafeBoxClient():
 
             return NOT_DONE_YET
 
-        def encryptFile_cb(data):
+        def updateShared_cb(ticket, iv):
+            print "Updating file..."
+            s = line.split()
+            agent = Agent(reactor)
+            dataq = []
+            dataq.append(ticket)
+            dataq.append( iv )
+            # print "debugging:ticket, iv updatefile"
+            # print dataq[0]
+            # print dataq[1]
+            # print len(dataq[1])
+            print "Uploading file..."
+            enc_file = open("enc_fileout", 'r')
+            body = _FileProducer(enc_file ,dataq)
+            headers = http_headers.Headers()
+            d = agent.request(
+                'POST',
+                'http://localhost:8000/shares/?method=updateshared&ccid='
+                + self.ccid + "&name=" + os.path.basename(s[3]) + "&fileid=" + s[2] ,
+                headers,
+                body)
+            d.addCallback(self.printPutReply_cb)
+
+            return NOT_DONE_YET
+
+        def encryptFile_cb(data):#TODO: Some error checking here.
             s = line.split()
             #pprint(data)
 	    if isinstance(data, basestring):
@@ -449,6 +474,8 @@ class SafeBoxClient():
             crd = self.client_id.encryptFileSym(file, enc_file, key=key)
 
             new_iv =  self.client_id.encryptData(crd[1])
+            if s[1] == "shared":
+                return self.handleGetTicket(updateShared_cb, new_iv)
             return self.handleGetTicket(updateFile_cb, new_iv)
 
 
@@ -457,16 +484,20 @@ class SafeBoxClient():
             if not os.path.exists(s[3]):
                 print "Error: File " + s[3] + " does not exist.\n"
                 return
-            hfmd_data = (encryptFile_cb, s[2])
-            return self.handleGetTicket(self.handleGetFileMData, hfmd_data)
+            if s[1] == "shared":
+                hsmd_data = (encryptFile_cb, s[2])
+                return self.handleGetTicket(self.handleGetShareMData, hsmd_data)
+            if s[1] == "file":
+                hfmd_data = (encryptFile_cb, s[2])
+                return self.handleGetTicket(self.handleGetFileMData, hfmd_data)
+            print "Error: invalid arguments!\n"
+            print "Usage: update <file|shared> <fileid> <local file path>"
+            return
 
         else:
-            if s[1].lower() !="file":
+            if s[1].lower() !="file" and s[1].lower() !="shared":
                 print "Error: invalid arguments!\n"
-                print "Usage: update <file|share> <fileid|shareid> <local file path>"
-                return
-            elif not os.path.exists(s[2]):
-                print "Error: File " + s[2] + " does not exist.\n"
+                print "Usage: update <file|shared> <fileid> <local file path>"
                 return
 
 
