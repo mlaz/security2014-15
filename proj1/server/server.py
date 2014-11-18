@@ -357,7 +357,7 @@ class Shares(Resource):
     #
     # getshared: To download a shared file.
     # 'method' = "getshared"
-    # 'ccid' = <user's ccid> ADD CONDITIONS FOR THIS
+    # 'ccid' = <user's ccid>
     # 'fileid' = <the file id>
 
     def render_GET(self, request):
@@ -371,11 +371,17 @@ class Shares(Resource):
 
         # getshared:
         if request.args['method'] == ['getshared']:
+            if ('ccid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not specified."} }
+
             if 'fileid' not in request.args.keys():
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'fileid' not specified."} }
 
             print request.args['method']
+            if error is None:
+                return handler.handleGetShared(request)
 
         else:
             error = { 'status': {'error': "Invalid Request",

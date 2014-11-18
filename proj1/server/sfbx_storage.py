@@ -508,6 +508,52 @@ class SafeBoxStorage(object):
                         'message': "File does not exist."} }
         return json.dumps(error, sort_keys=True, encoding="utf-8")
 
+    # getshared(): Retrieves metadata for a given shared fileid,
+    # then writes the file contents to the response body along with IV and Key.
+    def getShared(self, request, pboxid, pubkey):
+        fileid = str(request.args['fileid'])
+        fileid = strip_text(fileid)
+
+        def finishTrnf_cb(ignored, file):
+            file.close()
+            request.finish()
+
+        # getshared_cb(): Callback for getshared(), sends the file back to the client.
+        def getshared_cb(data):
+            if len(data) == 0:
+                error = { 'status': {'error': "Invalid Request",
+                                     'message': "File does not exist."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+                return
+
+            file_path = str(data[0][0]) + "/" + fileid
+            if not os.path.exists(file_path):
+                error = { 'status': {'error': "Invalid Request",
+                                     'message': "File does not exist."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
+
+            request.write(str(data[0][1])) # writing key
+            iv_plain = self.sid.decryptData(data[0][2]) # writing IV
+            print iv_plain
+            iv = self.sid.encryptData(iv_plain, pubkey)
+            request.write(iv)
+            file = open(file_path ,"r")
+            sender = FileSender()
+            sender.CHUNK_SIZE = 200
+            df = sender.beginFileTransfer(file, request)
+
+            df.addErrback(err)
+            df.addCallback(finishTrnf_cb, file)
+
+        d = self.dbpool.runQuery(
+             "SELECT File.OwnerPBoxId, Share.SymKey, File.IV  " +
+            "FROM Share JOIN File ON File.FileId = Share.FileId " +
+            "AND Share.FileID = ? AND Share.ForeignPBoxId = ?", (fileid,pboxid));
+        d.addCallback(getshared_cb)
+        return NOT_DONE_YET
+
 
     # #TODO add some error handling to file I/O operations
     # #deleteFile: Checks if a given file exists on fs and db then deletes it.
