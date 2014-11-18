@@ -173,6 +173,9 @@ class AccessCtrlHandler(object):
     def handleGetShared(self, request):
         return self.handleValidation(request, self.storage.getShared)
 
+    def handleListShares(self, request):
+        return self.handleValidation(request, self.storage.listShares)
+
     def handleUpdateShared(self, request):
         return self.handleValidation(request, self.storage.updateShared)
 

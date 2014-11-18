@@ -402,6 +402,17 @@ class Shares(Resource):
             if error is None:
                 return handler.handleGetShared(request)
 
+        # getshared:
+        if request.args['method'] == ['list']:
+            if ('ccid' not in request.args.keys()):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not specified."} }
+
+            print request.args['method']
+            if error is None:
+                return handler.handleListShares(request)
+
+
         else:
             error = { 'status': {'error': "Invalid Request",
                      'message': "Unknown method for this resource."} }
@@ -525,7 +536,7 @@ class Shares(Resource):
         pprint(request.__dict__)
         return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-       
+
 
     # DELETE Methods:
     #
@@ -569,7 +580,7 @@ class Shares(Resource):
         pprint(request.__dict__)
         return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        
+
 
 
 if __name__ == "__main__":

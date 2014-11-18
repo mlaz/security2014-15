@@ -145,15 +145,32 @@ class SafeBoxClient():
             d.addCallback(handleList_cb)
             return NOT_DONE_YET
 
+
+        def handleListShares(signedTicket):
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(signedTicket))
+            headers = http_headers.Headers()
+	    d = agent.request(
+                    'GET',
+                    'http://localhost:8000/shares/?method=list&ccid='
+                + self.ccid,
+                headers,
+                body)
+            d.addCallback(handleList_cb)
+            return NOT_DONE_YET
+
+
         s = line.split()
         if len(s) == 2:
             if s[1].lower() == "pboxes":
                 return self.handleGetTicket(handleListPboxes)
             elif s[1].lower() == "files":
 		return self.handleGetTicket(handleListFiles)
+            elif s[1].lower() == "shares":
+		return self.handleGetTicket(handleListShares)
 	    else:
 		print "Error: invalid arguments!\n"
-		print "Correct usage: list <pboxes|files>"
+		print "Correct usage: list <pboxes|files|shares>"
         else:
 	    print "Error: invalid arguments!\n"
             print "Correct usage: list <pboxes|files>"

@@ -760,3 +760,32 @@ class SafeBoxStorage(object):
         # the file does not exist on fs.
         #write some error msg "
         request.finish() #instead of this return error
+
+
+    # listShares(): Retrieves shared FileName and FileId attributes for a given pboxid.
+    def listShares(self, request, pboxid, pubkey):
+
+        # listShares_cb(): Callback for listShares(), produces the reply from the database query result.
+        def listShares_cb (data):
+            data_dict = {}
+
+            tsize = 0
+            for row in data:
+                row_dict = {
+                    'FileName': row[0],
+                    'FileId': row[1]}
+                data_dict.update({tsize: row_dict})
+                tsize = tsize + 1
+
+            reply_dict = { 'status': "OK", 'size': tsize, 'list': data_dict }
+            #pprint(reply_dict)
+            request.write(json.dumps(reply_dict, encoding="utf-8"));
+            request.finish()
+
+        d = self.dbpool.runQuery(
+            "SELECT File.FileName, Share.FileId " +
+            "FROM Share JOIN File ON File.FileId = Share.FileId " +
+            "AND Share.ForeignPBoxId = ?", (pboxid,));
+        d.addCallback(listShares_cb)
+        return NOT_DONE_YET
+
