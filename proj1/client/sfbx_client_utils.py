@@ -206,6 +206,30 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
+      # handleGetShareMData: Handles get pbox metadata operations.
+    def handleGetShareMData(self, ticket, data):
+        #data = (method, fileid)
+        def handleGetShareMData_cb(response):
+            defer = Deferred()
+            defer.addCallback(data[0])
+            response.deliverBody(DataPrinter(defer, "getmdata"))
+            return NOT_DONE_YET
+
+        agent = Agent(reactor)
+        body = FileBodyProducer(StringIO(ticket))
+        headers = http_headers.Headers()
+        d = agent.request(
+			'GET',
+            'http://localhost:8000/shares/?method=get_mdata&ccid='
+            + self.ccid + "&fileid=" + data[1],
+            headers,
+            body)
+
+        d.addCallback(handleGetShareMData_cb)
+
+        return NOT_DONE_YET
+
+
     # handleGet: handles get file
     def handleGet(self, line):
         def printResult_cb(data):
@@ -220,6 +244,9 @@ class SafeBoxClient():
                                                (printResult_cb, s[2].lower()))
             elif s[1].lower() == "fileinfo":
                 return self.handleGetFileMData(ticket,
+                                               (printResult_cb, s[2].lower()))
+            elif s[1].lower() == "shareinfo":
+                return self.handleGetShareMData(ticket,
                                                (printResult_cb, s[2].lower()))
 
         # Decrypt and write the file
@@ -266,6 +293,30 @@ class SafeBoxClient():
             d.addCallback(handleGetFile_cb, f)
             return NOT_DONE_YET
 
+        #for get shared
+        def handleGetShared(signedTicket):
+            def handleGetShared_cb(response, f):
+                finished = Deferred()
+                finished.addCallback(writeFile)
+                cons = FileConsumer(f)
+                response.deliverBody(FileDownload(finished, cons))
+                print "Downloading file..."
+                return finished
+
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(signedTicket))
+            headers = http_headers.Headers()
+            d = agent.request(
+                    'GET',
+                    'http://localhost:8000/shares/?method=getshared&ccid=' + self.ccid
+                + '&fileid=' + fileId,
+                    headers,
+                    body)
+            f = open(fileId, "w")
+            d.addCallback(handleGetShared_cb, f)
+            return NOT_DONE_YET
+
+
         s = line.split()
         if len(s) == 3:
             #if s[1].lower() == "file":
@@ -275,17 +326,23 @@ class SafeBoxClient():
                 return self.handleGetTicket(handleGetInfo_cb)
             elif s[1].lower() == "fileinfo":
                 return self.handleGetTicket(handleGetInfo_cb)
+            elif s[1].lower() == "shareinfo":
+                return self.handleGetTicket(handleGetInfo_cb)
             else:
                 print "Error: invalid arguments!\n"
-                print "Correct usage: get file <fileId> or get pboxinfo <PBox Owners CC Number>"
+                print "Correct usage: get fileinfo <fileId> or get pboxinfo <PBox Owners CC Number>"
         elif len(s) == 4:
             if s[1].lower() == "file":
                 fileId = s[2]
                 return self.handleGetTicket(handleGetFile)
 
+            if s[1].lower() == "shared":
+                fileId = s[2]
+                return self.handleGetTicket(handleGetShared)
+
             else:
                 print "Error: invalid arguments!\n"
-                print "Correct usage: get file <fileId> <dest. filename on filesystem.>"
+                print "Correct usage: get file|shared <fileId> <dest. filename on filesystem.>"
         else:
 	    print "Error: invalid arguments!\n"
 

@@ -38,9 +38,6 @@ class CommandReceiver(basic.LineReceiver):
         #for test purposes only
         elif method == "getticket":
             return client.handleGetTicket()
-        #for test purposes only
-        elif method == "getmdata":
-            return client.handleGetMData()
         elif method == "help":
                  self.transport.write("\nThe availabe commands are:\nlist pboxes"
                                       + "\nlist files\nget file <fileId>\nupdate file <fileId>\n"

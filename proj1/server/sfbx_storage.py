@@ -554,6 +554,38 @@ class SafeBoxStorage(object):
         d.addCallback(getshared_cb)
         return NOT_DONE_YET
 
+    # getShareMData(): Queries the data base for  all
+    # File's attributes for given file id and owner pboxid.
+    def getShareMData(self, request, pboxid, pubkey):
+        fileid = str(request.args['fileid'])
+        fileid = strip_text(fileid)
+        # getShareMData_cb(): Callback for getShareMData(), Processes retrieved data for response.
+        def getShareMData_cb (data):
+            reply_dict = {}
+            if len(data) == 0:
+                reply_dict = { 'status': {'error': "Invalid Input", 'message': "File unreachable."} }
+            else:
+             #   for row in data:
+                iv_plain = self.sid.decryptData(data[0][2])
+                iv = self.sid.encryptData(iv_plain, pubkey)
+                row_dict = {
+                    'FileName': data[0][0],
+                    'SymKey': data[0][1],
+                    'IV': iv,
+                    'Writeable': data[0][3],}
+                reply_dict.update(row_dict)
+                reply_dict = {'status': "OK", 'data': reply_dict}
+
+            request.write(json.dumps(reply_dict, encoding="utf-8"));
+            request.finish()
+
+        d = self.dbpool.runQuery(
+            "SELECT File.FileName, Share.SymKey, File.IV, Share.Writeable " +
+            "FROM Share JOIN File ON File.FileId = Share.FileId " +
+            "AND Share.FileID = ? AND Share.ForeignPBoxId = ?", (fileid,pboxid));
+        d.addCallback(getShareMData_cb)
+        return NOT_DONE_YET
+
 
     # #TODO add some error handling to file I/O operations
     # #deleteFile: Checks if a given file exists on fs and db then deletes it.
