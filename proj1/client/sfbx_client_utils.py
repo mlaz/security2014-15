@@ -522,21 +522,32 @@ class SafeBoxClient():
 
             d.addCallback(printDeleteReply_cb)
 
+        def deleteShare_cb(ticket):
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(ticket))
+            headers = http_headers.Headers()
+            d = agent.request(
+                'DELETE',
+                'http://localhost:8000/shares/?method=delete&ccid='
+                + self.ccid + "&fileid=" + s[2] + "&rccid=" + s[3],
+                headers,
+                body)
+
+            d.addCallback(printDeleteReply_cb)
 
         s = line.split()
+        if len(s) == 4:
+            return self.handleGetTicket(deleteShare_cb)
         if len(s) == 3:
             return self.handleGetTicket(deleteFile_cb)
 
-        else:
-            if s[1].lower() !="file":
-                print "Error: invalid arguments!\n"
-                print "Usage: delete <file|share> <fileid|shareid>"
-                return
-            elif not os.path.exists(s[2]):
-                print "Error: File " + s[2] + " does not exist.\n"
-                return
 
+
+        print "Error: invalid arguments!\n"
+        print "Usage: delete <file|share> <fileid> <None|rccid>"
         return
+
+
 
     def handleShare(self, line):
 

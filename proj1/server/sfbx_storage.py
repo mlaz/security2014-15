@@ -662,8 +662,7 @@ class SafeBoxStorage(object):
         df.addCallback(updateFileTable_cb)
         return NOT_DONE_YET
 
-    # updateSharePerm(): Queries the data base for  all
-    # File's attributes for given file id and owner pboxid.
+    # updateSharePerm(): Updates write permissions for a shared file
     def updateSharePerm(self, request, pboxid, pubkey):
         return
         # # updateSharePerm_cb(): Callback for updateSharePerm(), Processes retrieved data for response.
@@ -699,45 +698,65 @@ class SafeBoxStorage(object):
         # d.addCallback(updateSharePerm_cb)
         # return NOT_DONE_YET
 
-    # #TODO add some error handling to file I/O operations
-    # #deleteFile: Checks if a given file exists on fs and db then deletes it.
-    # def deleteShare(self, request):
-    #     pboxid = str(request.args['pboxid'])
-    #     pboxid = strip_text(pboxid)
-    #     fileid = str(request.args['fileid'])
-    #     fileid = strip_text(fileid)
-    #     file_path = pboxid + "/" + fileid
+    #TODO add some error handling to file I/O operations
+    #deleteFile: Checks if a given file exists on fs and db then deletes it.
+    def deleteShare(self, request, pboxid, pubkey):
+        fileid = str(request.args['fileid'])
+        fileid = strip_text(fileid)
+        rccid = str(request.args['rccid'])
+        rccid = strip_text(rccid)
+        file_path = str(pboxid) + "/" + str(fileid)
 
-    #     # 3 - Deleting the file.
-    #     def deleteAndFinish_cb(ignored):
-    #         os.remove(file_path)
-    #         request.finish()
+        # 3 - Deleting the file.
+        def finish_cb(ignored):
+            error = { 'status': "OK" }
+            request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+            request.finish()
+            return
 
-    #     # 2 - Deleting table entry for referenced file if the file exists.
-    #     def checkAndDelete_cb(data):
-    #         if len(data) == 0:
-    #             #write some error msg
-    #             request.finish()
+        # 3 - Deleting table entry for referenced share if the file exists.
+        def checkAndDelete_cb(data):
+            if len(data) == 0:
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "User not found."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
 
-    #         else:
-    #             df = self.dbpool.runQuery(
-    #                 "DELETE " +
-    #                 "FROM File " +
-    #                 "WHERE FileId = ? AND OwnerPBoxId = ? ",
-    #                 (fileid, pboxid))
-    #             df.addCallback(deleteAndFinish_cb)
+            else:
+                df = self.dbpool.runQuery(
+                    "DELETE " +
+                    "FROM share " +
+                    "WHERE FileId = ? AND ForeignPBoxId = ? ",
+                    (fileid, data[0][0]))
+                df.addCallback(finish_cb)
 
-    #     # 1 - Checking if the file exists.
-    #     if os.path.exists(file_path) == True:
-    #         df = self.dbpool.runQuery(
-    #             "SELECT FileId, OwnerPBoxId " +
-    #             "FROM File " +
-    #             "WHERE FileId = ? AND OwnerPBoxId = ? " +
-    #             "ORDER BY FileId DESC",
-    #             (fileid, pboxid))
-    #         df.addCallback(checkAndDelete_cb)
-    #         return NOT_DONE_YET
+        # 2 - getting dst's pboxid
+        def getDstPId_cb(data):
+            if len(data) == 0:
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "File not found."} }
+                request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
+                request.finish()
 
-    #     # the file does not exist on fs.
-    #     #write some error msg "
-    #     request.finish() #instead of this return error
+            else:
+                df = self.dbpool.runQuery(
+                    "SELECT PBoxId " +
+                    "FROM PBox " +
+                    "WHERE UserCCId = ? ",
+                    (rccid,))
+                df.addCallback(checkAndDelete_cb)
+
+
+        # 1 - Checking if the user is the file owner
+        if os.path.exists(file_path) == True:
+            df = self.dbpool.runQuery(
+                "SELECT FileId, OwnerPBoxId " +
+                "FROM File " +
+                "WHERE FileId = ? AND OwnerPBoxId = ? ",
+                (fileid,pboxid))
+            df.addCallback(getDstPId_cb)
+            return NOT_DONE_YET
+
+        # the file does not exist on fs.
+        #write some error msg "
+        request.finish() #instead of this return error

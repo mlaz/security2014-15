@@ -451,9 +451,8 @@ class Shares(Resource):
             error = { 'status': {'error': "Invalid Request",
                      'message': "Unknown method for this resource."} }
 
-        if error != None:
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
 
     # POST Methods:
     #
@@ -522,13 +521,11 @@ class Shares(Resource):
             error = { 'status': {'error': "Invalid Request",
                     'message': "Unknown method for this resource."} }
 
-        if error != None:
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        newdata = request.content.getvalue()
-        print newdata
-        return NOT_DONE_YET
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+       
 
     # DELETE Methods:
     #
@@ -545,7 +542,6 @@ class Shares(Resource):
                      'message': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        pprint(request.__dict__)
 
         # delete:
         if request.args['method'] == ['delete']:
@@ -553,17 +549,27 @@ class Shares(Resource):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'fileid' not specified."} }
 
+            if ('ccid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not specified."} }
+
+            if ('rccid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'rccid' not specified."} }
+
             print request.args['method']
+            if error == None:
+                return handler.handleDeleteShare(request)
 
         else:
             error = { 'status': {'error': "Invalid Request",
                      'message': "Unknown method for this resource."} }
 
-        if error != None:
-            pprint(request.__dict__)
-            return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        return NOT_DONE_YET
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+        
 
 
 if __name__ == "__main__":
