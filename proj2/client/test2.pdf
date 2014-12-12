@@ -1,0 +1,145 @@
+<html><head><title>web.Server Traceback (most recent call last)</title></head><body><b>web.Server Traceback (most recent call last):</b>
+
+<div>
+  <style type="text/css">
+    div.error {
+      color: red;
+      font-family: Verdana, Arial, helvetica, sans-serif;
+      font-weight: bold;
+    }
+
+    div {
+      font-family: Verdana, Arial, helvetica, sans-serif;
+    }
+
+    div.stackTrace {
+    }
+
+    div.frame {
+      padding: 1em;
+      background: white;
+      border-bottom: thin black dashed;
+    }
+
+    div.frame:first-child {
+      padding: 1em;
+      background: white;
+      border-top: thin black dashed;
+      border-bottom: thin black dashed;
+    }
+
+    div.location {
+    }
+
+    span.function {
+      font-weight: bold;
+      font-family: "Courier New", courier, monospace;
+    }
+
+    div.snippet {
+      margin-bottom: 0.5em;
+      margin-left: 1em;
+      background: #FFFFDD;
+    }
+
+    div.snippetHighlightLine {
+      color: red;
+    }
+
+    span.code {
+      font-family: "Courier New", courier, monospace;
+    }
+  </style>
+
+  <div class="error">
+    <span>exceptions.KeyError</span>: <span>'iv'</span>
+  </div>
+  <div class="stackTrace">
+    <div class="frame">
+      <div class="location">
+        <span>/usr/lib64/python2.7/site-packages/twisted/web/server.py</span>:<span>156</span> in <span class="function">process</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">155</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;resrc = self.site.getResourceFor(self)</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">156</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;self.render(resrc)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">157</span>
+          <code class="code"> &#160; &#160; &#160; &#160;except:</code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>/usr/lib64/python2.7/site-packages/twisted/web/server.py</span>:<span>191</span> in <span class="function">render</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">190</span>
+          <code class="code"> &#160; &#160; &#160; &#160;try:</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">191</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;body = resrc.render(self)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">192</span>
+          <code class="code"> &#160; &#160; &#160; &#160;except UnsupportedMethod, e:</code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>/usr/lib64/python2.7/site-packages/twisted/web/resource.py</span>:<span>216</span> in <span class="function">render</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">215</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;raise UnsupportedMethod(allowedMethods)</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">216</span>
+          <code class="code"> &#160; &#160; &#160; &#160;return m(request)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">217</span>
+          <code class="code"></code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>server.py</span>:<span>260</span> in <span class="function">render_PUT</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">259</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;print request.args['method']</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">260</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;return handlePutFile(request)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">261</span>
+          <code class="code"></code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>/home/miguel/SECURITY/repo/proj1/server/sfbx_srv_utils.py</span>:<span>186</span> in <span class="function">handlePutFile</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">185</span>
+          <code class="code"> &#160; &#160;filename = strip_text(filename)</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">186</span>
+          <code class="code"> &#160; &#160;iv = str(request.args['iv'])</code>
+        </div><div class="snippetLine">
+          <span class="lineno">187</span>
+          <code class="code"> &#160; &#160;iv = strip_text(iv)</code>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="error">
+    <span>exceptions.KeyError</span>: <span>'iv'</span>
+  </div>
+</div>
+
+</body></html>
