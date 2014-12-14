@@ -9,8 +9,9 @@ import json
 TICKET_TIMEOUT = 3
 TICKET_SIZE = 172 # size of signed ticket
 
-from sfbx_server_cryptography import ServerIdentity, TicketManager
-from  sfbx_storage import SafeBoxStorage
+from sfbx_server_cryptography import ServerIdentity
+from sfbx_authentication import TicketManager, SessionManager
+from sfbx_storage import SafeBoxStorage, strip_text
 
 #
 # SafeBox server access control utilities API:
@@ -25,6 +26,7 @@ class AccessCtrlHandler(object):
     def __init__(self, keys_dirname=0, password=0):
        self.server = ServerIdentity(keys_dirname, password)
        self.ticket_manager = TicketManager(self.server)
+       self.sesson_manager = SessionManager(self.server)
        self.storage = SafeBoxStorage(self.server)
 
     # Handling Session resource related operations:
@@ -49,14 +51,83 @@ class AccessCtrlHandler(object):
                 pubkey = data[0][1]
                 print pubkey
 
-                ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
-                reply_dict = { 'status': "OK", 'ticket': ticket}
+                if self.session_manager.hasSession(pboxid):
+                    ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
+                    reply_dict = { 'status': "OK", 'ticket': ticket}
+                else:
+                    reply_dict = { 'status': {'error': "Unauthenticated User",
+                                      'message': "User has no session."} }
 
             request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
             request.finish()
 
         d = self.storage.getClientData(request)
         d.addCallback(getTicket_cb)
+        return NOT_DONE_YET
+
+    # # handleValidation: handles the validation process for a given method
+    # # only calls method if the provided ticket is valid.
+    # def handleRegistration(self, request, method, ticket=None):
+    #     return
+
+    # handleStartSession: handles start session requests.
+    def handleGetNonce(self, request):
+        key_txt = request.content.read()
+        if not key_txt:
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "No key on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
+        cli_key = RSA.importKey(key_txt)
+        if not cli_key.can_encrypt():
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "Invalid key on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
+
+        (nonce, nonceid) = self.auth_manager.generateNonce(cli_key)
+        reply_dict = { 'status': "OK", 'Nonce': nonce, 'NonceId': nonceid}
+
+        request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
+        request.finish()
+
+    # handleStartSession: handles start session requests.
+    def handleStartSession(self, request):
+        nonce = request.content.read()
+        nonceid = strip_text(str(request.args['nonceid']))
+
+        print str(nonce)
+        if not nonce:
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "No challange nonce on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
+
+        def handleStartSession_cb(data):
+            if not data:
+                reply_dict = { 'status': {'error': "Invalid Request",
+                                          'message': 'User does not exist.'} }
+
+            else:
+                pboxid = data[0][0]
+                pubkey = data[0][1]
+                print pubkey
+
+                if self.session_manager.startSession(nonce, nonceid, pubkey, pboxid):
+                    print "Valid Nonce!"
+                    reply_dict = { 'status': "OK" }
+
+                else:
+                    print "Invalid Nonce!"
+                    reply_dict = { 'status': {'error': "Invalid Nonce",
+                                          'message': 'N/A'} }
+
+            #TODO: a session cookie should be passed here
+            request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
+            request.finish()
+
+        d = self.storage.getClientData(request)
+        d.addCallback(handleValidation_cb)
         return NOT_DONE_YET
 
     # handleValidation: handles the validation process for a given method
@@ -134,7 +205,7 @@ class AccessCtrlHandler(object):
         cli_key = RSA.importKey(key_txt)
         if not cli_key.can_encrypt():
             reply_dict = { 'status': {'error': "Invalid Request",
-                                      'message': "No key on request body."} }
+                                      'message': "Invalid key on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
 
         d = self.storage.getClientData(request)
@@ -181,7 +252,6 @@ class AccessCtrlHandler(object):
 
     def handleUpdateSharePerm(self, request):
         return self.handleValidation(request, self.storage.updateSharePerm)
-
 
     def handleDeleteShare(self, request):
         return self.handleValidation(request, self.storage.deleteShare)
