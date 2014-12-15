@@ -51,44 +51,56 @@ if __name__ == "__main__":
     signer = PKCS1_v1_5.new(sid.priv_key)
     sig1 = signer.sign(hash)
     sig1_enc = sid.encryptData(sig1)
-#    sig1_enc = b64encode(sig1_enc[0])
-#    sig1_enc = sig1_enc[0]
-
 #/client
-#server
+
     print tm.validateTicket(str(sig1_enc), 1, sid.pub_key.exportKey())
 
-
-
     print "Testing AuthManager: "
-
     pboxid = 26
     auth = AuthManager(sid)
     (enc_nonce, nonceid) = auth.generateNonce(sid.pub_key.exportKey())
+
 #client
     nonce = sid.decryptData(enc_nonce, None)
     print nonce
-
     hash = SHA256.new(nonce)
     signer = PKCS1_v1_5.new(sid.priv_key)
     sig2 = signer.sign(hash)
     print sig2
     sig2_enc = sid.encryptData(sig2)
+#/client
 
     print auth.validateNonce(sig2_enc, nonceid, sid.pub_key.exportKey())
 
+    print "Testing SessionManager: "
+    pboxid = 26
+    sess = SessionManager(sid)
+    auth = sess.authm
+
+    (enc_nonce, nonceid) = auth.generateNonce(sid.pub_key.exportKey())
+
+#client
+    nonce = sid.decryptData(enc_nonce, None)
+    print nonce
+    hash = SHA256.new(nonce)
+    signer = PKCS1_v1_5.new(sid.priv_key)
+    sig2 = signer.sign(hash)
+    print sig2
+    sig2_enc = sid.encryptData(sig2)
+#/client
+
+    if sess.startSession(sig2_enc, nonceid, sid.pub_key.exportKey(), pboxid):
+        print "SessionStarted"
+    else: print "Error: couldn't start session."
 
 
-    # print "Testing SessionManager: "
+    print sess.hasSession(pboxid)
 
-    # pboxid = 26
-    # sess = SessionManager(sid)
-    # if sess.StartSession():
-    #     print "SessionStarted"
-    # else print "Error: couldn't start session."
+    sess.refreshSession(pboxid)
+    print sess.hasSession(pboxid)
 
-    # sess.hasSession(pboxid)
-
+    sess.finishSession(pboxid)
+    print sess.hasSession(pboxid) #  should return false
     # print "Testing AccessCtrlHandler: "
 
     # handler = AccessCtrlHandler("rsakeys", "mypass")

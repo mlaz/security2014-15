@@ -26,7 +26,7 @@ class AccessCtrlHandler(object):
     def __init__(self, keys_dirname=0, password=0):
        self.server = ServerIdentity(keys_dirname, password)
        self.ticket_manager = TicketManager(self.server)
-       self.sesson_manager = SessionManager(self.server)
+       self.session_manager = SessionManager(self.server)
        self.storage = SafeBoxStorage(self.server)
 
     # Handling Session resource related operations:
@@ -65,12 +65,7 @@ class AccessCtrlHandler(object):
         d.addCallback(getTicket_cb)
         return NOT_DONE_YET
 
-    # # handleValidation: handles the validation process for a given method
-    # # only calls method if the provided ticket is valid.
-    # def handleRegistration(self, request, method, ticket=None):
-    #     return
-
-    # handleStartSession: handles start session requests.
+    # handleGetNonce:
     def handleGetNonce(self, request):
         key_txt = request.content.read()
         if not key_txt:
@@ -78,6 +73,7 @@ class AccessCtrlHandler(object):
                                       'message': "No key on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
 
+        print key_txt
         cli_key = RSA.importKey(key_txt)
         if not cli_key.can_encrypt():
             reply_dict = { 'status': {'error': "Invalid Request",
@@ -85,18 +81,16 @@ class AccessCtrlHandler(object):
             return json.dumps(reply_dict, encoding="utf-8")
 
 
-        (nonce, nonceid) = self.auth_manager.generateNonce(cli_key)
-        reply_dict = { 'status': "OK", 'Nonce': nonce, 'NonceId': nonceid}
+        (nonce, nonceid) = self.session_manager.getNonce(key_txt)
+        reply_dict = { 'status': "OK", 'nonce': nonce, 'nonceid': nonceid}
 
-        request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
-        request.finish()
+        return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
 
     # handleStartSession: handles start session requests.
     def handleStartSession(self, request):
         nonce = request.content.read()
         nonceid = strip_text(str(request.args['nonceid']))
-
-        print str(nonce)
+        nonceid = int(nonceid)
         if not nonce:
             reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No challange nonce on request body."} }
@@ -113,6 +107,7 @@ class AccessCtrlHandler(object):
                 pubkey = data[0][1]
                 print pubkey
 
+                print "encripted nonce: ", nonce
                 if self.session_manager.startSession(nonce, nonceid, pubkey, pboxid):
                     print "Valid Nonce!"
                     reply_dict = { 'status': "OK" }
@@ -127,7 +122,7 @@ class AccessCtrlHandler(object):
             request.finish()
 
         d = self.storage.getClientData(request)
-        d.addCallback(handleValidation_cb)
+        d.addCallback(handleStartSession_cb)
         return NOT_DONE_YET
 
     # handleValidation: handles the validation process for a given method

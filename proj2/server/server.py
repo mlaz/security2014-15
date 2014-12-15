@@ -23,6 +23,10 @@ class Session(Resource):
     # 'method' = "getticket"
     # 'ccid' = <user's cc id number> #should we receive this encrypted
     #
+    # getnonce: To get an authentication challange nonce.
+    # 'method' = "getnonce"
+    # 'ccid' = <user's cc id number> #should we receive this encrypted
+    #
     # getkey: To get the server's public key.
     # 'method' = "getkey"
     def render_GET(self, request):
@@ -33,6 +37,10 @@ class Session(Resource):
                      'message': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
+        # getnonce:
+        if request.args['method'] == ['getnonce']:
+            print request.args['method']
+            return handler.handleGetNonce(request)
 
         # getticket:
         if request.args['method'] == ['getticket']:
@@ -54,6 +62,93 @@ class Session(Resource):
 
         pprint(request.__dict__)
         return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+    # PUT Methods:
+    #
+    # register: To register (create) a new PBox.
+    # 'method' = "start"
+    # 'ccid' = <user's Portuguese Cityzen Card number>
+    # 'name' = <user's real name>
+    def render_PUT(self, request):
+        error = None;
+        if 'method' not in request.args.keys():
+            error = { 'status': {'error': "Invalid Request",
+                     'message': "Argument 'method' not specified."} }
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+        # register:
+        if request.args['method'] == ['register']:
+            print request.args['method']
+
+            if 'ccid' not in request.args.keys():
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not specified."} }
+
+            if ('name' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'name' not specified."} }
+
+            # if ('pubkey' not in request.args.keys()) & (error == None):
+            #     error = { 'status': {'error': "Invalid Request",
+            #              'message': "Argument 'pubkey' not specified."} }
+
+            elif (error == None):
+                return handler.handleRegisterPBox(request);
+
+        # startsession:
+        if request.args['method'] == ['startsession']:
+            print request.args['method']
+
+            if 'ccid' not in request.args.keys():
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not specified."} }
+
+            if ('nonceid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'nonceid' not specified."} }
+
+            elif (error == None):
+                return handler.handleStartSession(request);
+
+
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+    # TODO: We will need to delete every entry reated to the given filenumber
+    # on the Share table.
+    # DELETE Methods:
+    #
+    # delete: To delete a file.
+    # 'method' = "finish"
+    # 'ccid' = <the ccid>
+    # 'fileid' = <the file id>
+    def render_DELETE(self, request):
+        error = None;
+        if 'method' not in request.args.keys():
+            error = { 'status': {'error': "Invalid Request",
+                     'message': "Argument 'method' not specified."} }
+            return json.dumps(error, sort_keys=True, encoding="utf-8")
+
+
+        # delete:
+        if request.args['method'] == ['delete']:
+            if 'ccid' not in request.args.keys():
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'ccid' not specified."} }
+
+            if ('fileid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                        'message': "Argument 'fileid' not specified."} }
+
+            print request.args['method']
+            if error is None:
+                return handler.handleDeleteFile(request)
+
+        error = { 'status': {'error': "Invalid Request",
+                    'message': "Unknown method for this resource."} }
+        pprint(request.__dict__)
+        return json.dumps(error, sort_keys=True, encoding="utf-8")
+
 
 # The PBoxes Resource:
 #

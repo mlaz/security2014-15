@@ -31,8 +31,8 @@ class SafeBoxClient():
     def startClient(self, ccid, passwd, name):
 
         # checking if client is already registered
-        def checkClientReg_cb(ticket):
-            if ticket is None:
+        def checkClientReg_cb(success):
+            if success == False:
                 print "User not registered..."
                 if name is "":
                     print "Please provide your name for registry."
@@ -44,7 +44,7 @@ class SafeBoxClient():
         # Instanciating ClientIdentity
         def startClientId_cb(key):
             self.client_id = ClientIdentity(self.ccid, passwd, key)
-            self.handleGetTicket(checkClientReg_cb)
+            self.handleStartSession(checkClientReg_cb)
 
         self.ccid = ccid
         return self.handleGetKey(startClientId_cb)
@@ -67,6 +67,47 @@ class SafeBoxClient():
             None)
 
         d.addCallback(handleGetKey_cb)
+
+        return NOT_DONE_YET
+
+    # handleGetNonce: handles startsession operations
+    def handleStartSession(self, method):
+        def procResponse_cb(response):
+            #TODO Here the cookie should be extracted
+            defer = Deferred()
+            defer.addCallback(method)
+            response.deliverBody(DataPrinter(defer, "bool"))
+            return NOT_DONE_YET
+
+        def startSession_cb((signedNonce, nonceid)):
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(signedNonce))
+            headers = http_headers.Headers()
+	    d = agent.request(
+                'PUT',
+                'http://localhost:8000/session/?method=startsession&ccid='
+                + self.ccid + '&nonceid=' + str(nonceid),
+                headers,
+                body)
+            d.addCallback(procResponse_cb)
+            return NOT_DONE_YET
+
+        def getNonce_cb(response):
+            defer = Deferred()
+            defer.addCallback(startSession_cb)
+            response.deliverBody(getNonce(defer, self.client_id))
+            return NOT_DONE_YET
+
+        agent = Agent(reactor)
+        body = FileBodyProducer(StringIO(self.client_id.pub_key.exportKey('PEM')))
+        headers = http_headers.Headers()
+        d = agent.request(
+            'GET',
+            'http://localhost:8000/session/?method=getnonce',
+            headers,
+            body)
+
+        d.addCallback(getNonce_cb)
 
         return NOT_DONE_YET
 

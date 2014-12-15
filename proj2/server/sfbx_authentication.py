@@ -66,33 +66,36 @@ class SessionManager(object):
         self.authm = AuthManager(identity)
         self.active_sessions = {}
 
+    def getNonce(self, cli_key):
+        return self.authm.generateNonce(cli_key)
+
     def startSession(self, signature, nonceid, cli_key, pboxid):
-        if pboxid in self.active_nonces.keys():
+        if pboxid in self.active_sessions.keys():
             del self.active_sessions[pboxid]
 
         if self.authm.validateNonce (signature, nonceid, cli_key):
             timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession_cb, pboxid)
-            self.active_nonces.update({pboxid : timeout})
+            self.active_sessions.update({pboxid : timeout})
             return True
         else:
             return False
 
-    def hasSesson(pboxid):
-        return pboxid in self.active_nonces.keys()
+    def hasSession(self, pboxid):
+        return pboxid in self.active_sessions.keys()
 
-    def killSession_cb(pboxid):
+    def killSession_cb(self, pboxid):
         del self.active_sessions[pboxid]
 
-    def refreshSesson(pboxid):
-        if pboxid in self.active_nonces.keys():
+    def refreshSession(self, pboxid):
+        if pboxid in self.active_sessions.keys():
             self.active_sessions[pboxid].cancel()
             timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession_cb, pboxid)
             self.active_sessions[pboxid] = timeout
         else:
             print "(SessionManager:RefreshSesson) Session not found for pboxid: " + pboxid
 
-    def finishSession(pboxid):
-        if pboxid in self.active_nonces.keys():
+    def finishSession(self, pboxid):
+        if pboxid in self.active_sessions.keys():
             del self.active_sessions[pboxid]
         else:
             print "(SessionManager:FinishSession) Session not found for pboxid: " + pboxid

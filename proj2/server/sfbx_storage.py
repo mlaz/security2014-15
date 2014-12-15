@@ -283,6 +283,7 @@ class SafeBoxStorage(object):
                                      'message': "File does not exist."} }
                 request.write(json.dumps(error, sort_keys=True, encoding="utf-8"))
                 request.finish()
+                return
 
             request.write(str(data[0][4]))
             iv_plain = self.sid.decryptData(data[0][3])

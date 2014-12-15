@@ -115,14 +115,15 @@ class ClientIdentity(object):
         return (key, iv)
 
 
+
 # Some utilities:
 #
 
 # getTicket Protocol:
 class getTicket(Protocol):
-    def __init__(self, finished, ci): #TODO: change all calls, add ci
+    def __init__(self, finished, ci):
         self.finished = finished
-        self.ci = ci
+        self.ci = ci #the clientid
         self.total_response = ""
 
     def dataReceived(self, bytes):
@@ -153,4 +154,43 @@ class getTicket(Protocol):
         enc = self.ci.encryptData(sci)
         #enc = b64encode(eci[0])
         # print "signed and encoded ticket: " + enc
+        return enc
+
+# getNonce Protocol:
+class getNonce(Protocol):
+    def __init__(self, finished, ci):
+        self.finished = finished
+        self.ci = ci #the clientid
+        self.total_response = ""
+
+    def dataReceived(self, bytes):
+        self.total_response += bytes
+
+    def connectionLost(self, reason):
+        (finalNonce, nonceid) = self.formatNonce(self.total_response)
+        self.finished.callback((finalNonce, nonceid))
+
+    def formatNonce(self, response):
+
+        response = json.loads(response)
+
+        if response["status"] != "OK" :
+            print(response["status"]["error"])
+            return None
+        else:
+            s = response["nonce"]
+            #print "Encrypted Nonce: ", s
+            cryNonce = self.process_nonce(str(s))
+            #print "Decrypted Nonce: ", cryNonce
+            return (cryNonce, response["nonceid"])
+
+    def process_nonce(self, nonce):
+        #print "server's nonce: ", nonce
+        dci = self.ci.decryptData(nonce)
+        print "server's nonce: ", dci
+        sci = self.ci.signData(dci)
+        print "signed nonce: ", sci
+        enc = self.ci.encryptData(sci)
+        #enc = b64encode(eci[0])
+        # print "signed and encoded nonce: " + enc
         return enc

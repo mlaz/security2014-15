@@ -67,3 +67,9 @@ class DataPrinter(Protocol):
 	    else:
 		data = response
 	    return data
+        elif self.method == "bool":
+            if (response["status"] != "OK"):
+                data = False
+            else:
+                data = True
+            return data
