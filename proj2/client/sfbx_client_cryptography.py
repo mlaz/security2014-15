@@ -6,6 +6,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
+from Crypto.Util import number
 from Crypto import Random
 
 from base64 import b64encode, b64decode
@@ -149,8 +150,8 @@ class getTicket(Protocol):
 
     def process_ticket(self, ticket):
         # print "server's ticket: ", ticket
-        dci = self.ci.decryptData(ticket)
-        sci = self.ci.signData(dci)
+        dci = number.long_to_bytes(number.bytes_to_long(self.ci.decryptData(ticket)) + long("1", base=10))
+        sci = self.ci.signData(str(dci))
         enc = self.ci.encryptData(sci)
         #enc = b64encode(eci[0])
         # print "signed and encoded ticket: " + enc

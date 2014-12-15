@@ -52,7 +52,7 @@ class AccessCtrlHandler(object):
                 print pubkey
 
                 if self.session_manager.hasSession(pboxid):
-                    ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
+                    ticket = self.ticket_manager.getTicket(pboxid, pubkey)
                     reply_dict = { 'status': "OK", 'ticket': ticket}
                 else:
                     reply_dict = { 'status': {'error': "Unauthenticated User",
