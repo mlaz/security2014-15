@@ -118,6 +118,8 @@ class AccessCtrlHandler(object):
                                           'message': 'N/A'} }
 
             #TODO: a session cookie should be passed here
+            ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
+            request.addCookie('ticket', ticket)
             request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
             request.finish()
 
@@ -221,8 +223,8 @@ class AccessCtrlHandler(object):
     def handlePutFile(self, request):#
         return self.handleValidation(request, self.storage.putFile)
 
-    def handleUpdateFile(self, request):#
-        return self.handleValidation(request, self.storage.updateFile)
+    def handleUpdateFile(self, request):# 
+       return self.handleValidation(request, self.storage.updateFile)
 
     def handleDeleteFile(self, request):
         return self.handleValidation(request, self.storage.deleteFile)

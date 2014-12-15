@@ -187,9 +187,9 @@ class getNonce(Protocol):
     def process_nonce(self, nonce):
         #print "server's nonce: ", nonce
         dci = self.ci.decryptData(nonce)
-        print "server's nonce: ", dci
+        #print "server's nonce: ", dci
         sci = self.ci.signData(dci)
-        print "signed nonce: ", sci
+        #print "signed nonce: ", sci
         enc = self.ci.encryptData(sci)
         #enc = b64encode(eci[0])
         # print "signed and encoded nonce: " + enc
