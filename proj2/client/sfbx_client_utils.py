@@ -1,5 +1,5 @@
 from twisted.internet import reactor
-from twisted.web.client import Agent, FileBodyProducer
+from twisted.web.client import Agent, CookieAgent, FileBodyProducer
 from twisted.web.http_headers import Headers
 from twisted.internet import abstract
 from twisted.web.server import NOT_DONE_YET
@@ -9,6 +9,7 @@ from twisted.internet.protocol import Protocol
 from twisted.protocols.ftp import FileConsumer
 from sfbx_client_protocols import FileDownload
 
+from cookielib import CookieJar
 from base64 import b64encode, b64decode
 from StringIO import StringIO
 from pprint import pformat
@@ -16,6 +17,7 @@ from pprint import pprint
 from zope import interface
 import os
 import json
+import Cookie
 
 from sfbx_client_cryptography import *
 from sfbx_client_protocols import *
@@ -26,6 +28,8 @@ class SafeBoxClient():
     def __init__(self, server_addr="localhost:8000"):
         self.server_addr = server_addr
         self.client_id = self.ccid = self.ccid = None
+        self.cookie_jar = CookieJar()
+        self.curr_ticket = ""
 
     #initializes the client's remaining attributes
     def startClient(self, ccid, passwd, name):
@@ -40,6 +44,11 @@ class SafeBoxClient():
                 else:
                     print "Registering user."
                     return self.handleRegister(name)
+            #pprint(self.cookie_jar.__dict__)
+            for cookie in self.cookie_jar:
+                #print cookie
+                #print type(cookie)
+                self.curr_ticket = self.client_id.decryptData(cookie.value)
 
         # Instanciating ClientIdentity
         def startClientId_cb(key):
@@ -73,14 +82,14 @@ class SafeBoxClient():
     # handleGetNonce: handles startsession operations
     def handleStartSession(self, method):
         def procResponse_cb(response):
-            #TODO Here the cookie should be extracted
+            #TODO Here the cookie should be extracted            response.
             defer = Deferred()
             defer.addCallback(method)
             response.deliverBody(DataPrinter(defer, "bool"))
             return NOT_DONE_YET
 
         def startSession_cb((signedNonce, nonceid)):
-            agent = Agent(reactor)
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             body = FileBodyProducer(StringIO(signedNonce))
             headers = http_headers.Headers()
 	    d = agent.request(
@@ -152,6 +161,20 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
+    def processCookie(self, uri):
+        dci = number.long_to_bytes(number.bytes_to_long(self.curr_ticket) + long("1", base=10))
+        #print "incremented ticket", number.bytes_to_long(dci)
+        self.curr_ticket = dci
+        sci = self.client_id.signData(str(dci))
+        enc = self.client_id.encryptData(sci)
+        for cookie in self.cookie_jar:
+            cookie.value = enc
+            cookie.path = uri
+            self.cookie_jar.clear()
+            self.cookie_jar.set_cookie(cookie)
+
+        print cookie
+
     # handleList: handles every list command
     def handleList(self, line):
         def handleList_cb(response):
@@ -159,44 +182,43 @@ class SafeBoxClient():
             response.deliverBody(DataPrinter(defer, "list"))
             return NOT_DONE_YET
 
-        def handleListPboxes(signedTicket):
-            print len(signedTicket)
-            agent = Agent(reactor)
-	    body = FileBodyProducer(StringIO(signedTicket))
+        def handleListPboxes():
+            self.processCookie("/pboxes")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
             d = agent.request(
                     'GET',
                     'http://localhost:8000/pboxes/?method=list&ccid='
                 + self.ccid,
                 headers,
-                body)
+                None)
             d.addCallback(handleList_cb)
             return NOT_DONE_YET
 
-        def handleListFiles(signedTicket):
-            agent = Agent(reactor)
-            body = FileBodyProducer(StringIO(signedTicket))
+        def handleListFiles():
+            self.processCookie("/files")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
 	    d = agent.request(
                     'GET',
                     'http://localhost:8000/files/?method=list&ccid='
                 + self.ccid,
                 headers,
-                body)
+                None)
             d.addCallback(handleList_cb)
             return NOT_DONE_YET
 
 
-        def handleListShares(signedTicket):
-            agent = Agent(reactor)
-            body = FileBodyProducer(StringIO(signedTicket))
+        def handleListShares():
+            self.processCookie("/shares")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
 	    d = agent.request(
                     'GET',
                     'http://localhost:8000/shares/?method=list&ccid='
                 + self.ccid,
                 headers,
-                body)
+                None)
             d.addCallback(handleList_cb)
             return NOT_DONE_YET
 
@@ -204,11 +226,11 @@ class SafeBoxClient():
         s = line.split()
         if len(s) == 2:
             if s[1].lower() == "pboxes":
-                return self.handleGetTicket(handleListPboxes)
+                return handleListPboxes()
             elif s[1].lower() == "files":
-		return self.handleGetTicket(handleListFiles)
+		return handleListFiles()
             elif s[1].lower() == "shares":
-		return self.handleGetTicket(handleListShares)
+		return handleListShares()
 	    else:
 		print "Error: invalid arguments!\n"
 		print "Correct usage: list <pboxes|files|shares>"

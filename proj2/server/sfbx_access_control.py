@@ -129,16 +129,15 @@ class AccessCtrlHandler(object):
 
     # handleValidation: handles the validation process for a given method
     # only calls method if the provided ticket is valid.
-    def handleValidation(self, request, method, ticket=None):
-        # ticket will only exist from arguments when this method
-        # is being called to validate data transfer operations
+    def handleValidation(self, request, method):
+        #ticket = request.content.read(TICKET_SIZE)
+        #print "TICKET_FROM_COOKIE:", request.getCookie('ticket')
+        ticket = request.getCookie('ticket')
+        print str(ticket)
         if not ticket:
-            ticket = request.content.read(TICKET_SIZE)
-            print str(ticket)
-            if not ticket:
-                reply_dict = { 'status': {'error': "Invalid Request",
-                                      'message': "No ticket on request body."} }
-                return json.dumps(reply_dict, encoding="utf-8")
+            reply_dict = { 'status': {'error': "Invalid Request",
+                        'message': "No ticket on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
 
 
         def handleValidation_cb(data):
@@ -220,10 +219,10 @@ class AccessCtrlHandler(object):
     def handleGetFile(self, request):
         return self.handleValidation(request, self.storage.getFile)
 
-    def handlePutFile(self, request):#
+    def handlePutFile(self, request):
         return self.handleValidation(request, self.storage.putFile)
 
-    def handleUpdateFile(self, request):# 
+    def handleUpdateFile(self, request):
        return self.handleValidation(request, self.storage.updateFile)
 
     def handleDeleteFile(self, request):
