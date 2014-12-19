@@ -10,50 +10,6 @@ NONCE_TIMEOUT = 3
 TICKET_TIMEOUT = 3
 TICKET_SIZE = 172 # size of signed ticket
 
-
-# class TicketManager:
-# This class provides a facility generating and validating tickets which will be signed
-# by the client and sent back to the server inside a request body. A ticket is only valid
-# for a single request and lasts for <TICKET_TIMEOUT> minutes.
-# class TicketManager(object):
-
-#     def __init__(self, identity):
-#         self.server = identity
-#         self.active_tickets = {}
-
-#     #generateTicket: returns base64 encoded ticket
-#     def generateTicket(self, pboxid, cli_key):
-#         def removeTicket_cb(pboxid):
-#             del self.active_tickets[pboxid]
-
-#         if pboxid in self.active_tickets.keys():
-#             self.active_tickets[pboxid]['timeout'].cancel()
-#             del self.active_tickets[pboxid]
-
-#         ticket = str(Random.get_random_bytes(64))
-# #        pprint(ticket)
-# #        print type(ticket)
-#         #cli_key = RSA.importKey(cli_key)
-#         enc_ticket = self.server.encryptData(ticket , cli_key)
-#         timeout = reactor.callLater(TICKET_TIMEOUT * 60, removeTicket_cb, pboxid)
-#         self.active_tickets.update({pboxid: {'ticket': ticket,  'timeout': timeout}})
-#         return enc_ticket
-
-#     #validateTicket: ticket must be base64 encoded
-#     def validateTicket(self,signature, pboxid, cli_key):
-#         original = ""
-#         if pboxid in self.active_tickets.keys():
-#             self.active_tickets[pboxid]['timeout'].cancel()
-#             original = self.active_tickets[pboxid]['ticket']
-#             del self.active_tickets[pboxid]
-#         else:
-#             return False
-
-#         cli_key = RSA.importKey(cli_key)
-#         print signature
-#         signature = self.server.decryptData(signature)#TEST THIS!
-#         return self.server.verifySignature(signature, original, cli_key)
-
 class TicketManager(object):
 
     def __init__(self, identity):
@@ -68,7 +24,6 @@ class TicketManager(object):
     def generateTicket(self, pboxid, cli_key):
 
         if pboxid in self.active_tickets.keys():
-            self.active_tickets[pboxid]['timeout'].cancel()
             del self.active_tickets[pboxid]
 
         ticket = Random.get_random_bytes(64)

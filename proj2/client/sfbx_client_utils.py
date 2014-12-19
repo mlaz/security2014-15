@@ -120,32 +120,6 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
-    # handleGetTicket: handles getticket operations
-    def handleGetTicket(self, method, data=None):
-        def handleGetTicket_cb(response):
-            defer = Deferred()
-            if data:
-                defer.addCallback(method, data)
-            else:
-                defer.addCallback(method)
-
-            response.deliverBody(getTicket(defer, self.client_id))
-            return NOT_DONE_YET
-
-        agent = Agent(reactor)
-        headers = http_headers.Headers()
-        d = agent.request(
-                'GET',
-                'http://localhost:8000/session/?method=getticket&ccid='
-            + self.ccid,
-            headers,
-            None)
-
-        d.addCallback(handleGetTicket_cb)
-
-        return NOT_DONE_YET
-
-    # handleRegister: Handles register commands.
     def handleRegister(self, name):
 
         agent = Agent(reactor)
@@ -240,7 +214,7 @@ class SafeBoxClient():
 
 
     # handleGetMData: Handles get pbox metadata operations.
-    def handleGetMData(self, ticket, data):
+    def handleGetMData(self, data):
         #data = (method, tgtccid)
         pprint(data)
         def handleGetMData_cb(response):
@@ -249,22 +223,23 @@ class SafeBoxClient():
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
-        agent = Agent(reactor)
-        body = FileBodyProducer(StringIO(ticket))
+
+        self.processCookie("/pboxes")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
 			'GET',
             'http://localhost:8000/pboxes/?method=get_mdata&ccid='
             + self.ccid + "&tgtccid=" + data[1],
             headers,
-            body)
+            None)
 
         d.addCallback(handleGetMData_cb)
 
         return NOT_DONE_YET
 
         # handleGetFileMData: Handles get pbox metadata operations.
-    def handleGetFileMData(self, ticket, data):
+    def handleGetFileMData(self, data):
         #data = (method, fileid)
         def handleGetFileMData_cb(response):
             defer = Deferred()
@@ -272,22 +247,22 @@ class SafeBoxClient():
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
-        agent = Agent(reactor)
-        body = FileBodyProducer(StringIO(ticket))
+        self.processCookie("/files")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
 			'GET',
             'http://localhost:8000/files/?method=get_mdata&ccid='
             + self.ccid + "&fileid=" + data[1],
             headers,
-            body)
+            None)
 
         d.addCallback(handleGetFileMData_cb)
 
         return NOT_DONE_YET
 
       # handleGetShareMData: Handles get pbox metadata operations.
-    def handleGetShareMData(self, ticket, data):
+    def handleGetShareMData(self, data):
         #data = (method, fileid)
         def handleGetShareMData_cb(response):
             defer = Deferred()
@@ -295,15 +270,15 @@ class SafeBoxClient():
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
-        agent = Agent(reactor)
-        body = FileBodyProducer(StringIO(ticket))
+        self.processCookie("/shares")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
 			'GET',
             'http://localhost:8000/shares/?method=get_mdata&ccid='
             + self.ccid + "&fileid=" + data[1],
             headers,
-            body)
+            None)
 
         d.addCallback(handleGetShareMData_cb)
 
@@ -317,17 +292,14 @@ class SafeBoxClient():
             return NOT_DONE_YET
 
         # for info requests
-        def handleGetInfo_cb(ticket):
+        def handleGetInfo_cb():
             s = line.split()
             if s[1].lower() == "pboxinfo":
-                return self.handleGetMData(ticket,
-                                               (printResult_cb, s[2].lower()))
+                return self.handleGetMData((printResult_cb, s[2].lower()))
             elif s[1].lower() == "fileinfo":
-                return self.handleGetFileMData(ticket,
-                                               (printResult_cb, s[2].lower()))
+                return self.handleGetFileMData((printResult_cb, s[2].lower()))
             elif s[1].lower() == "shareinfo":
-                return self.handleGetShareMData(ticket,
-                                               (printResult_cb, s[2].lower()))
+                return self.handleGetShareMData((printResult_cb, s[2].lower()))
 
         # Decrypt and write the file
         def writeFile(ignore): #we should implement http error code checking
@@ -351,7 +323,7 @@ class SafeBoxClient():
             print "File written."
 
         # for get file
-        def handleGetFile(signedTicket):
+        def handleGetFile():
             def handleGetFile_cb(response, f):
                 finished = Deferred()
                 finished.addCallback(writeFile)
@@ -360,21 +332,21 @@ class SafeBoxClient():
                 print "Downloading file..."
                 return finished
 
-            agent = Agent(reactor)
-            body = FileBodyProducer(StringIO(signedTicket))
+            self.processCookie("/files")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
             d = agent.request(
                     'GET',
                     'http://localhost:8000/files/?method=getfile&ccid=' + self.ccid
                 + '&fileid=' + fileId,
                     headers,
-                    body)
+                    None)
             f = open(fileId, "w")
             d.addCallback(handleGetFile_cb, f)
             return NOT_DONE_YET
 
         #for get shared
-        def handleGetShared(signedTicket):
+        def handleGetShared():
             def handleGetShared_cb(response, f):
                 finished = Deferred()
                 finished.addCallback(writeFile)
@@ -383,15 +355,15 @@ class SafeBoxClient():
                 print "Downloading file..."
                 return finished
 
-            agent = Agent(reactor)
-            body = FileBodyProducer(StringIO(signedTicket))
+            self.processCookie("/shares")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
             d = agent.request(
                     'GET',
                     'http://localhost:8000/shares/?method=getshared&ccid=' + self.ccid
                 + '&fileid=' + fileId,
                     headers,
-                    body)
+                    None)
             f = open(fileId, "w")
             d.addCallback(handleGetShared_cb, f)
             return NOT_DONE_YET
@@ -403,22 +375,22 @@ class SafeBoxClient():
              #   fileId = s[2]
               #  return self.handleGetTicket(handleGetFile)
             if s[1].lower() == "pboxinfo":
-                return self.handleGetTicket(handleGetInfo_cb)
+                return handleGetInfo_cb()
             elif s[1].lower() == "fileinfo":
-                return self.handleGetTicket(handleGetInfo_cb)
+                return handleGetInfo_cb()
             elif s[1].lower() == "shareinfo":
-                return self.handleGetTicket(handleGetInfo_cb)
+                return handleGetInfo_cb()
             else:
                 print "Error: invalid arguments!\n"
                 print "Correct usage: get fileinfo <fileId> or get pboxinfo <PBox Owners CC Number>"
         elif len(s) == 4:
             if s[1].lower() == "file":
                 fileId = s[2]
-                return self.handleGetTicket(handleGetFile)
+                return handleGetFile()
 
             if s[1].lower() == "shared":
                 fileId = s[2]
-                return self.handleGetTicket(handleGetShared)
+                return handleGetShared()
 
             else:
                 print "Error: invalid arguments!\n"
@@ -438,15 +410,15 @@ class SafeBoxClient():
     # handlePutFile: handles file upload
     def handlePutFile(self, line):
 
-        def putFile_cb(ticket):
+        def putFile_cb():
             print "Encrypting file..."
             s = line.split()
             file = open(s[2], 'r')
             enc_file = open("enc_fileout", 'w')
             crd = self.client_id.encryptFileSym(file, enc_file)
-            agent = Agent(reactor)
+            self.processCookie("/files")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             dataq = []
-            dataq.append(ticket)
             dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key))
             dataq.append( self.client_id.encryptData(crd[1]) )
             #print crd[1]
@@ -469,6 +441,7 @@ class SafeBoxClient():
 
             return NOT_DONE_YET
 
+        #TODO: Move the parsing to client.py this makes no sense!
         s = line.split()
         if len(s) != 3:
             print "Error: invalid arguments!\n"
@@ -482,17 +455,17 @@ class SafeBoxClient():
                 print "Error: File " + s[2] + " does not exist.\n"
                 return
 
-        return self.handleGetTicket(putFile_cb)
+                return putFile_cb()
 
     #handles update commands
     def handleUpdate(self, line):
-        def updateFile_cb(ticket, iv):
+        def updateFile_cb(iv):
             #data = (key,)
             print "Updating file..."
             s = line.split()
-            agent = Agent(reactor)
+            self.processCookie("/files")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             dataq = []
-            dataq.append(ticket)
             dataq.append( iv )
             # print "debugging:ticket, iv updatefile"
             # print dataq[0]
@@ -512,12 +485,12 @@ class SafeBoxClient():
 
             return NOT_DONE_YET
 
-        def updateShared_cb(ticket, iv):
+        def updateShared_cb(iv):
             print "Updating file..."
             s = line.split()
-            agent = Agent(reactor)
+            self.processCookie("/shares")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             dataq = []
-            dataq.append(ticket)
             dataq.append( iv )
             # print "debugging:ticket, iv updatefile"
             # print dataq[0]
@@ -555,20 +528,20 @@ class SafeBoxClient():
 
             new_iv =  self.client_id.encryptData(crd[1])
             if s[1] == "shared":
-                return self.handleGetTicket(updateShared_cb, new_iv)
-            return self.handleGetTicket(updateFile_cb, new_iv)
+                return updateShared_cb(new_iv)
+            return updateFile_cb(new_iv)
 
-        def updateSharePerm(ticket):
+        def updateSharePerm():
             s = line.split()
-            agent = Agent(reactor)
-            body = _FileProducer(StringIO(ticket))
+            self.processCookie("/shares")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
             d = agent.request(
                 'POST',
                 'http://localhost:8000/shares/?method=updateshareperm&ccid='
                 + self.ccid + "&rccid=" + s[3] + "&fileid=" + s[2] + "&writeable=" + s[4] ,
                 headers,
-                body)
+                None)
             d.addCallback(self.printPutReply_cb)
 
             return NOT_DONE_YET
@@ -578,7 +551,7 @@ class SafeBoxClient():
 
         if len(s) == 5:
             if s[1] == "shareperm":
-                return self.handleGetTicket(updateSharePerm)
+                return updateSharePerm()
                 print "Error: invalid arguments!\n"
                 print "Usage: update shareperm <fileid> <rccid> <true>"
                 return
@@ -590,10 +563,10 @@ class SafeBoxClient():
                 return
             if s[1] == "shared":
                 hsmd_data = (encryptFile_cb, s[2])
-                return self.handleGetTicket(self.handleGetShareMData, hsmd_data)
+                return self.handleGetShareMData(hsmd_data)
             if s[1] == "file":
                 hfmd_data = (encryptFile_cb, s[2])
-                return self.handleGetTicket(self.handleGetFileMData, hfmd_data)
+                return self.handleGetFileMData(hfmd_data)
             print "Error: invalid arguments!\n"
             print "Usage: update <file|shared> <fileid> <local file path>"
             return
@@ -613,39 +586,37 @@ class SafeBoxClient():
             else:
                 pprint(data)
 
-        def deleteFile_cb(ticket):
-            agent = Agent(reactor)
-            body = FileBodyProducer(StringIO(ticket))
+        def deleteFile_cb():
+            self.processCookie("/files")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
             d = agent.request(
                 'DELETE',
                 'http://localhost:8000/files/?method=delete&ccid='
                 + self.ccid + "&fileid=" + s[2],
                 headers,
-                body)
+                None)
 
             d.addCallback(printDeleteReply_cb)
 
-        def deleteShare_cb(ticket):
-            agent = Agent(reactor)
-            body = FileBodyProducer(StringIO(ticket))
+        def deleteShare_cb():
+            self.processCookie("/shares")
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
             d = agent.request(
                 'DELETE',
                 'http://localhost:8000/shares/?method=delete&ccid='
                 + self.ccid + "&fileid=" + s[2] + "&rccid=" + s[3],
                 headers,
-                body)
+                None)
 
             d.addCallback(printDeleteReply_cb)
 
         s = line.split()
         if len(s) == 4:
-            return self.handleGetTicket(deleteShare_cb)
+            return deleteShare_cb()
         if len(s) == 3:
-            return self.handleGetTicket(deleteFile_cb)
-
-
+            return deleteFile_cb()
 
         print "Error: invalid arguments!\n"
         print "Usage: delete <file|share> <fileid> <None|rccid>"
@@ -662,10 +633,10 @@ class SafeBoxClient():
                 dstkey = data["data"]["PubKey"]
                 print "pubkey" + dstkey
 
-                def shareFile_cb(ticket):
-                    agent = Agent(reactor)
+                def shareFile_cb():
+                    self.processCookie("/shares")
+                    agent = CookieAgent(Agent(reactor), self.cookie_jar)
                     dataq = []
-                    dataq.append(ticket)
                     dataq.append(enc_sym_key)
                     print "Uploading symkey..."
                     body = _FileProducer(StringIO("") ,dataq)
@@ -684,17 +655,17 @@ class SafeBoxClient():
                 sym_key = self.client_id.decryptData(enc_key, self.client_id.priv_key)
                 dstkey = RSA.importKey(dstkey)
                 enc_sym_key = self.client_id.encryptData(sym_key, dstkey)
-                return self.handleGetTicket(shareFile_cb, None)
+                return shareFile_cb()
 
 
 
             hfmd_data = (getDstKey_cb, s[3].lower())
-            return self.handleGetTicket(self.handleGetMData, hfmd_data)
+            return self.handleGetMData(hfmd_data)
 
         s = line.split()
         if len(s) == 4:
             hmd_data = (getFKey_cb, s[2].lower())
-            return self.handleGetTicket(self.handleGetFileMData, hmd_data)
+            return self.handleGetFileMData(hmd_data)
 
         else:
             if s[1].lower() != "file":
