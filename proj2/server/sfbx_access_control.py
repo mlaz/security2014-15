@@ -6,12 +6,12 @@ from Crypto.PublicKey import RSA
 from pprint import pprint
 import json
 
-TICKET_TIMEOUT = 3
-TICKET_SIZE = 172 # size of signed ticket
-
 from sfbx_server_cryptography import ServerIdentity
 from sfbx_authentication import TicketManager, SessionManager
 from sfbx_storage import SafeBoxStorage, strip_text
+
+NONCE_SIZE = 172 # size of signed nonce
+RSA_KEY_SIZE = 271
 
 #
 # SafeBox server access control utilities API:
@@ -26,7 +26,7 @@ class AccessCtrlHandler(object):
     def __init__(self, keys_dirname=0, password=0):
        self.server = ServerIdentity(keys_dirname, password)
        self.ticket_manager = TicketManager(self.server)
-       self.session_manager = SessionManager(self.server)
+       self.session_manager = SessionManager(self.server, self.ticket_manager)
        self.storage = SafeBoxStorage(self.server)
 
     # Handling Session resource related operations:
@@ -37,33 +37,6 @@ class AccessCtrlHandler(object):
         print key
         reply_dict = { 'status': "OK", 'key': key }
         return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
-
-    # handleGetTicket: Checks if the userd ccid exists in the database,
-    # if it does returns a ticket.
-    def handleGetTicket(self, request):
-
-        def getTicket_cb(data):
-            if not data:
-                reply_dict = { 'status': {'error': "Invalid Request",
-                                          'message': 'User does not exist.'} }
-            else:
-                pboxid = data[0][0]
-                pubkey = data[0][1]
-                print pubkey
-
-                if self.session_manager.hasSession(pboxid):
-                    ticket = self.ticket_manager.getTicket(pboxid, pubkey)
-                    reply_dict = { 'status': "OK", 'ticket': ticket}
-                else:
-                    reply_dict = { 'status': {'error': "Unauthenticated User",
-                                      'message': "User has no session."} }
-
-            request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
-            request.finish()
-
-        d = self.storage.getClientData(request)
-        d.addCallback(getTicket_cb)
-        return NOT_DONE_YET
 
     # handleGetNonce:
     def handleGetNonce(self, request):
@@ -87,8 +60,9 @@ class AccessCtrlHandler(object):
         return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
 
     # handleStartSession: handles start session requests.
-    def handleStartSession(self, request):
-        nonce = request.content.read()
+    def handleStartSession(self, request, nonce=None):
+        if not nonce:
+            nonce = request.content.read(NONCE_SIZE)
         nonceid = strip_text(str(request.args['nonceid']))
         nonceid = int(nonceid)
         if not nonce:
@@ -111,15 +85,18 @@ class AccessCtrlHandler(object):
                 if self.session_manager.startSession(nonce, nonceid, pubkey, pboxid):
                     print "Valid Nonce!"
                     reply_dict = { 'status': "OK" }
-
+                    ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
+                    request.addCookie('ticket', ticket)
                 else:
                     print "Invalid Nonce!"
-                    reply_dict = { 'status': {'error': "Invalid Nonce",
+                    if request.args['method'] == ['retister']:
+                        self.storage.deletePBox(pboxid)
+                        reply_dict = { 'status': {'error': "Invalid Ticket",
+                                        'message': 'Could not start session registeration dropped.'} }
+                    else:
+                        reply_dict = { 'status': {'error': "Invalid Nonce",
                                           'message': 'N/A'} }
 
-            #TODO: a session cookie should be passed here
-            ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
-            request.addCookie('ticket', ticket)
             request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
             request.finish()
 
@@ -130,7 +107,6 @@ class AccessCtrlHandler(object):
     # handleValidation: handles the validation process for a given method
     # only calls method if the provided ticket is valid.
     def handleValidation(self, request, method):
-        #ticket = request.content.read(TICKET_SIZE)
         #print "TICKET_FROM_COOKIE:", request.getCookie('ticket')
         ticket = request.getCookie('ticket')
         print str(ticket)
@@ -158,7 +134,7 @@ class AccessCtrlHandler(object):
                 else:
                     print "Invalid Ticket!"
                     reply_dict = { 'status': {'error': "Invalid Ticket",
-                                          'message': 'N/A'} }
+                                    'message': 'N/A'} }
 
             request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
             request.finish()
@@ -179,20 +155,28 @@ class AccessCtrlHandler(object):
 
     # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
     def handleRegisterPBox(self, request):
+
         # Checking if the client exists.
-        # pprint(request.__dict__)
-        def checkClientExists_cb(data, key_txt):
+        def checkClientExists_cb(data, nonce, key_txt):
             if data:
                 reply_dict = { 'status': {'error': "Invalid Request",
                                           'message': 'User already exists.'} }
                 request.write( json.dumps(reply_dict, sort_keys=True, encoding="utf-8") )
                 request.finish()
             else:
+                #TODO: validate certificates and keys here
                 d = self.storage.registerPBox(request, key_txt)
+                d.addCallback(self.handleGetSession, request, nonce)
                 return NOT_DONE_YET
 
         # Validating key.
-        key_txt = request.content.read()
+        nonce = request.content.read(NONCE_SIZE)
+        if not nonce:
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "No challange nonce on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
+        key_txt = request.content.read(RSA_KEY_SIZE)
         if not key_txt:
             reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No key on request body."} }
@@ -205,7 +189,7 @@ class AccessCtrlHandler(object):
             return json.dumps(reply_dict, encoding="utf-8")
 
         d = self.storage.getClientData(request)
-        d.addCallback(checkClientExists_cb, key_txt)
+        d.addCallback(checkClientExists_cb, nonce, key_txt)
         return NOT_DONE_YET
 
     # Handling Files resource related operations:

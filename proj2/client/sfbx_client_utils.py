@@ -82,7 +82,6 @@ class SafeBoxClient():
     # handleGetNonce: handles startsession operations
     def handleStartSession(self, method):
         def procResponse_cb(response):
-            #TODO Here the cookie should be extracted            response.
             defer = Deferred()
             defer.addCallback(method)
             response.deliverBody(DataPrinter(defer, "bool"))
@@ -121,18 +120,56 @@ class SafeBoxClient():
         return NOT_DONE_YET
 
     def handleRegister(self, name):
+        def checkClientReg_cb(success):
+            if success == False:
+                print "ERROR: Couldn't register user."
+                reactor.stop()
+
+            #pprint(self.cookie_jar.__dict__)
+            for cookie in self.cookie_jar:
+                #print cookie
+                #print type(cookie)
+                self.curr_ticket = self.client_id.decryptData(cookie.value)
+
+        def procResponse_cb(checkClientReg_cb):
+            defer = Deferred()
+            defer.addCallback(method)
+            response.deliverBody(DataPrinter(defer, "bool"))
+            return NOT_DONE_YET
+
+
+        def register_cb((signedNonce, nonceid)):
+            agent = CookieAgent(Agent(reactor), self.cookie_jar)
+            dataq = []
+            dataq.append(signedNonce)
+            body = _FileProducer(StringIO(self.client_id.pub_key.exportKey('PEM')) ,dataq)
+            headers = http_headers.Headers()
+            d = agent.request(
+                'PUT',
+                'http://localhost:8000/pboxes/?method=register&ccid='
+                + self.ccid
+                + '&name=' + name
+                + '&nonceid=' + str(nonceid),
+                headers,
+                body)
+            d.addCallback(procResponse_cb)
+
+        def getNonce_cb(response):
+            defer = Deferred()
+            defer.addCallback(register_cb)
+            response.deliverBody(getNonce(defer, self.client_id))
+            return NOT_DONE_YET
 
         agent = Agent(reactor)
         body = FileBodyProducer(StringIO(self.client_id.pub_key.exportKey('PEM')))
         headers = http_headers.Headers()
         d = agent.request(
-            'PUT',
-            'http://localhost:8000/pboxes/?method=register&ccid='
-            + self.ccid
-            + '&name=' + name,
+            'GET',
+            'http://localhost:8000/session/?method=getnonce',
             headers,
             body)
 
+        d.addCallback(getNonce_cb)
         return NOT_DONE_YET
 
     def processCookie(self, uri):
@@ -146,8 +183,7 @@ class SafeBoxClient():
             cookie.path = uri
             self.cookie_jar.clear()
             self.cookie_jar.set_cookie(cookie)
-
-        print cookie
+        #print cookie
 
     # handleList: handles every list command
     def handleList(self, line):
@@ -455,7 +491,7 @@ class SafeBoxClient():
                 print "Error: File " + s[2] + " does not exist.\n"
                 return
 
-                return putFile_cb()
+            return putFile_cb()
 
     #handles update commands
     def handleUpdate(self, line):
