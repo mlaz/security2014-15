@@ -58,7 +58,8 @@ class SafeBoxClient():
         self.ccid = ccid
         return self.handleGetKey(startClientId_cb)
 
-
+# Session, Registry and Authentication related opreations
+#
     # handleGetKey: handles getkey operations
     def handleGetKey(self, method):
         def handleGetKey_cb(response):
@@ -185,70 +186,55 @@ class SafeBoxClient():
             self.cookie_jar.set_cookie(cookie)
         #print cookie
 
+# List Operations
+#
     # handleList: handles every list command
-    def handleList(self, line):
-        def handleList_cb(response):
-            defer = Deferred()
-            response.deliverBody(DataPrinter(defer, "list"))
-            return NOT_DONE_YET
+    def handleList_cb(self, response):
+        defer = Deferred()
+        response.deliverBody(DataPrinter(defer, "list"))
+        return NOT_DONE_YET
 
-        def handleListPboxes():
-            self.processCookie("/pboxes")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            headers = http_headers.Headers()
-            d = agent.request(
-                    'GET',
-                    'http://localhost:8000/pboxes/?method=list&ccid='
-                + self.ccid,
-                headers,
-                None)
-            d.addCallback(handleList_cb)
-            return NOT_DONE_YET
+    def handleListPboxes(self):
+        self.processCookie("/pboxes")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+        headers = http_headers.Headers()
+        d = agent.request(
+            'GET',
+            'http://localhost:8000/pboxes/?method=list&ccid='
+            + self.ccid,
+            headers,
+            None)
+        d.addCallback(self.handleList_cb)
+        return NOT_DONE_YET
 
-        def handleListFiles():
-            self.processCookie("/files")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            headers = http_headers.Headers()
-	    d = agent.request(
-                    'GET',
-                    'http://localhost:8000/files/?method=list&ccid='
-                + self.ccid,
-                headers,
-                None)
-            d.addCallback(handleList_cb)
-            return NOT_DONE_YET
+    def handleListFiles(self):
+        self.processCookie("/files")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+        headers = http_headers.Headers()
+        d = agent.request(
+            'GET',
+            'http://localhost:8000/files/?method=list&ccid='
+            + self.ccid,
+            headers,
+            None)
+        d.addCallback(self.handleList_cb)
+        return NOT_DONE_YET
 
+    def handleListShares(self):
+        self.processCookie("/shares")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+        headers = http_headers.Headers()
+        d = agent.request(
+            'GET',
+            'http://localhost:8000/shares/?method=list&ccid='
+            + self.ccid,
+            headers,
+            None)
+        d.addCallback(self.handleList_cb)
+        return NOT_DONE_YET
 
-        def handleListShares():
-            self.processCookie("/shares")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            headers = http_headers.Headers()
-	    d = agent.request(
-                    'GET',
-                    'http://localhost:8000/shares/?method=list&ccid='
-                + self.ccid,
-                headers,
-                None)
-            d.addCallback(handleList_cb)
-            return NOT_DONE_YET
-
-
-        s = line.split()
-        if len(s) == 2:
-            if s[1].lower() == "pboxes":
-                return handleListPboxes()
-            elif s[1].lower() == "files":
-		return handleListFiles()
-            elif s[1].lower() == "shares":
-		return handleListShares()
-	    else:
-		print "Error: invalid arguments!\n"
-		print "Correct usage: list <pboxes|files|shares>"
-        else:
-	    print "Error: invalid arguments!\n"
-            print "Correct usage: list <pboxes|files>"
-
-
+# Get Operations
+#
     # handleGetMData: Handles get pbox metadata operations.
     def handleGetMData(self, data):
         #data = (method, tgtccid)
@@ -287,7 +273,7 @@ class SafeBoxClient():
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
-			'GET',
+            'GET',
             'http://localhost:8000/files/?method=get_mdata&ccid='
             + self.ccid + "&fileid=" + data[1],
             headers,
@@ -320,237 +306,188 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
-
     # handleGet: handles get file
-    def handleGet(self, line):
-        def printResult_cb(data):
-            pprint(data) #TODO: Format this!
-            return NOT_DONE_YET
+    #def handleGet(self, line):
+    def printResult_cb(self, data):
+        pprint(data) #TODO: Format this!
+        return NOT_DONE_YET
 
-        # for info requests
-        def handleGetInfo_cb():
-            s = line.split()
-            if s[1].lower() == "pboxinfo":
-                return self.handleGetMData((printResult_cb, s[2].lower()))
-            elif s[1].lower() == "fileinfo":
-                return self.handleGetFileMData((printResult_cb, s[2].lower()))
-            elif s[1].lower() == "shareinfo":
-                return self.handleGetShareMData((printResult_cb, s[2].lower()))
+    # for info requests
+    def handleGetInfo(self, s):
+        if s[1].lower() == "pboxinfo":
+            return self.handleGetMData((self.printResult_cb, s[2].lower()))
+        elif s[1].lower() == "fileinfo":
+            return self.handleGetFileMData((self.printResult_cb, s[2].lower()))
+        elif s[1].lower() == "shareinfo":
+            return self.handleGetShareMData((self.printResult_cb, s[2].lower()))
 
-        # Decrypt and write the file
-        def writeFile(ignore): #we should implement http error code checking
-            s = line.split()
-            enc_file = open(fileId, "r")
-            if len(s) == 4:
-                dec_file = open(s[3], "w")
-            else:
-                dec_file = open(fileId + "_decrypted", "w")
-
-            enc_key = enc_file.read(IV_KEY_SIZE_B64)
-            # print "debugging: iv key writefile"
-            # print enc_key
-            print "Decrypting file..."
-            key = self.client_id.decryptData(enc_key)
-            enc_iv = enc_file.read(IV_KEY_SIZE_B64)
-            #print enc_iv
-            iv = self.client_id.decryptData(enc_iv)
-            print iv
-            self.client_id.decryptFileSym(enc_file, dec_file, key, iv)
-            print "File written."
-
-        # for get file
-        def handleGetFile():
-            def handleGetFile_cb(response, f):
-                finished = Deferred()
-                finished.addCallback(writeFile)
-                cons = FileConsumer(f)
-                response.deliverBody(FileDownload(finished, cons))
-                print "Downloading file..."
-                return finished
-
-            self.processCookie("/files")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            headers = http_headers.Headers()
-            d = agent.request(
-                    'GET',
-                    'http://localhost:8000/files/?method=getfile&ccid=' + self.ccid
-                + '&fileid=' + fileId,
-                    headers,
-                    None)
-            f = open(fileId, "w")
-            d.addCallback(handleGetFile_cb, f)
-            return NOT_DONE_YET
-
-        #for get shared
-        def handleGetShared():
-            def handleGetShared_cb(response, f):
-                finished = Deferred()
-                finished.addCallback(writeFile)
-                cons = FileConsumer(f)
-                response.deliverBody(FileDownload(finished, cons))
-                print "Downloading file..."
-                return finished
-
-            self.processCookie("/shares")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            headers = http_headers.Headers()
-            d = agent.request(
-                    'GET',
-                    'http://localhost:8000/shares/?method=getshared&ccid=' + self.ccid
-                + '&fileid=' + fileId,
-                    headers,
-                    None)
-            f = open(fileId, "w")
-            d.addCallback(handleGetShared_cb, f)
-            return NOT_DONE_YET
-
-
-        s = line.split()
-        if len(s) == 3:
-            #if s[1].lower() == "file":
-             #   fileId = s[2]
-              #  return self.handleGetTicket(handleGetFile)
-            if s[1].lower() == "pboxinfo":
-                return handleGetInfo_cb()
-            elif s[1].lower() == "fileinfo":
-                return handleGetInfo_cb()
-            elif s[1].lower() == "shareinfo":
-                return handleGetInfo_cb()
-            else:
-                print "Error: invalid arguments!\n"
-                print "Correct usage: get fileinfo <fileId> or get pboxinfo <PBox Owners CC Number>"
-        elif len(s) == 4:
-            if s[1].lower() == "file":
-                fileId = s[2]
-                return handleGetFile()
-
-            if s[1].lower() == "shared":
-                fileId = s[2]
-                return handleGetShared()
-
-            else:
-                print "Error: invalid arguments!\n"
-                print "Correct usage: get file|shared <fileId> <dest. filename on filesystem.>"
+    # Decrypt and write the file
+    def writeFile_cb(self, ignore, s): #we should implement http error code checking
+        fileId = s[2]
+        enc_file = open(fileId, "r")
+        if len(s) == 4:
+            dec_file = open(s[3], "w")
         else:
-	    print "Error: invalid arguments!\n"
+            dec_file = open(fileId + "_decrypted", "w")
 
+        enc_key = enc_file.read(IV_KEY_SIZE_B64)
+        # print "debugging: iv key writefile"
+        # print enc_key
+        print "Decrypting file..."
+        key = self.client_id.decryptData(enc_key)
+        enc_iv = enc_file.read(IV_KEY_SIZE_B64)
+        #print enc_iv
+        iv = self.client_id.decryptData(enc_iv)
+        print iv
+        self.client_id.decryptFileSym(enc_file, dec_file, key, iv)
+        print "File written."
+
+    # for get file
+    def handleGetFile(self, s):
+        def handleGetFile_cb(response, f):
+            finished = Deferred()
+            finished.addCallback(self.writeFile_cb, s)
+            cons = FileConsumer(f)
+            response.deliverBody(FileDownload(finished, cons))
+            print "Downloading file..."
+            return finished
+
+        fileId = s[2]
+        self.processCookie("/files")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+        headers = http_headers.Headers()
+        d = agent.request(
+            'GET',
+            'http://localhost:8000/files/?method=getfile&ccid=' + self.ccid
+            + '&fileid=' + fileId,
+            headers,
+            None)
+        f = open(fileId, "w")
+        d.addCallback(handleGetFile_cb, f)
+        return NOT_DONE_YET
+
+    # for get shared
+    def handleGetShared(self, s):
+        def handleGetShared_cb(response, f):
+            finished = Deferred()
+            finished.addCallback(self.writeFile_cb, s)
+            cons = FileConsumer(f)
+            response.deliverBody(FileDownload(finished, cons))
+            print "Downloading file..."
+            return finished
+
+        fileId = s[2]
+        self.processCookie("/shares")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+        headers = http_headers.Headers()
+        d = agent.request(
+            'GET',
+            'http://localhost:8000/shares/?method=getshared&ccid=' + self.ccid
+            + '&fileid=' + fileId,
+            headers,
+            None)
+        f = open(fileId, "w")
+        d.addCallback(handleGetShared_cb, f)
+        return NOT_DONE_YET
+
+# Put Operations
     # printPutReply_cb: prints put and update responses
-    def printPutReply_cb(self,response):
-            print "Done."
+    def printPutReply_cb(self, response):
+        print "Done."
 
-            defer = Deferred()
-            response.deliverBody(DataPrinter(defer, "getmdata"))
-            return NOT_DONE_YET
-
+        defer = Deferred()
+        response.deliverBody(DataPrinter(defer, "getmdata"))
+        return NOT_DONE_YET
 
     # handlePutFile: handles file upload
     def handlePutFile(self, line):
-
-        def putFile_cb():
-            print "Encrypting file..."
-            s = line.split()
-            file = open(s[2], 'r')
-            enc_file = open("enc_fileout", 'w')
-            crd = self.client_id.encryptFileSym(file, enc_file)
-            self.processCookie("/files")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            dataq = []
-            dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key))
-            dataq.append( self.client_id.encryptData(crd[1]) )
-            #print crd[1]
-            # print "debugging:key, iv putfile"
-            # print dataq[1]
-            # print len(dataq[1])
-            # print dataq[2]
-            # print len(dataq[2])
-            print "Uploading file..."
-            enc_file = open("enc_fileout", 'r')
-            body = _FileProducer(enc_file ,dataq)
-            headers = http_headers.Headers()
-            d = agent.request(
-                'PUT',
-                'http://localhost:8000/files/?method=putfile&ccid='
-                + self.ccid + "&name=" + os.path.basename(s[2]),
-                headers,
-                body)
-            d.addCallback(self.printPutReply_cb)
-
-            return NOT_DONE_YET
-
-        #TODO: Move the parsing to client.py this makes no sense!
+        print "Encrypting file..."
         s = line.split()
-        if len(s) != 3:
-            print "Error: invalid arguments!\n"
-            return
-        else:
-            if s[1].lower() != "file":
-                print "Error: invalid arguments!\n"
-                print "Usage: put file <filepath>"
-                return
-            elif not os.path.exists(s[2]):
-                print "Error: File " + s[2] + " does not exist.\n"
-                return
+        file = open(s[2], 'r')
+        enc_file = open("enc_fileout", 'w')
+        crd = self.client_id.encryptFileSym(file, enc_file)
+        self.processCookie("/files")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+        dataq = []
+        dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key))
+        dataq.append( self.client_id.encryptData(crd[1]) )
+        #print crd[1]
+        # print "debugging:key, iv putfile"
+        # print dataq[1]
+        # print len(dataq[1])
+        # print dataq[2]
+        # print len(dataq[2])
+        print "Uploading file..."
+        enc_file = open("enc_fileout", 'r')
+        body = _FileProducer(enc_file ,dataq)
+        headers = http_headers.Headers()
+        d = agent.request(
+            'PUT',
+            'http://localhost:8000/files/?method=putfile&ccid='
+            + self.ccid + "&name=" + os.path.basename(s[2]),
+            headers,
+            body)
+        d.addCallback(self.printPutReply_cb)
 
-            return putFile_cb()
+        return NOT_DONE_YET
 
+# Update Operations
+#
     #handles update commands
-    def handleUpdate(self, line):
-        def updateFile_cb(iv):
-            #data = (key,)
-            print "Updating file..."
-            s = line.split()
-            self.processCookie("/files")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            dataq = []
-            dataq.append( iv )
-            # print "debugging:ticket, iv updatefile"
-            # print dataq[0]
-            # print dataq[1]
-            # print len(dataq[1])
-            print "Uploading file..."
-            enc_file = open("enc_fileout", 'r')
-            body = _FileProducer(enc_file ,dataq)
-            headers = http_headers.Headers()
-            d = agent.request(
-                'POST',
-                'http://localhost:8000/files/?method=updatefile&ccid='
-                + self.ccid + "&name=" + os.path.basename(s[3]) + "&fileid=" + s[2] ,
-                headers,
-                body)
-            d.addCallback(self.printPutReply_cb)
-
-            return NOT_DONE_YET
-
-        def updateShared_cb(iv):
-            print "Updating file..."
-            s = line.split()
-            self.processCookie("/shares")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            dataq = []
-            dataq.append( iv )
-            # print "debugging:ticket, iv updatefile"
-            # print dataq[0]
-            # print dataq[1]
-            # print len(dataq[1])
-            print "Uploading file..."
-            enc_file = open("enc_fileout", 'r')
-            body = _FileProducer(enc_file ,dataq)
-            headers = http_headers.Headers()
-            d = agent.request(
-                'POST',
-                'http://localhost:8000/shares/?method=updateshared&ccid='
-                + self.ccid + "&name=" + os.path.basename(s[3]) + "&fileid=" + s[2] ,
-                headers,
-                body)
-            d.addCallback(self.printPutReply_cb)
-
-            return NOT_DONE_YET
-
+    def handleUpdate(self, s):
         def encryptFile_cb(data):#TODO: Some error checking here.
-            s = line.split()
-            #pprint(data)
-	    if isinstance(data, basestring):
-		print data
+
+            def updateFile_cb(iv):
+                #data = (key,)
+                print "Updating file..."
+                self.processCookie("/files")
+                agent = CookieAgent(Agent(reactor), self.cookie_jar)
+                dataq = []
+                dataq.append( iv )
+                # print "debugging:ticket, iv updatefile"
+                # print dataq[0]
+                # print dataq[1]
+                # print len(dataq[1])
+                print "Uploading file..."
+                enc_file = open("enc_fileout", 'r')
+                body = _FileProducer(enc_file ,dataq)
+                headers = http_headers.Headers()
+                d = agent.request(
+                    'POST',
+                    'http://localhost:8000/files/?method=updatefile&ccid='
+                    + self.ccid + "&name=" + os.path.basename(s[3]) + "&fileid=" + s[2] ,
+                    headers,
+                    body)
+                d.addCallback(self.printPutReply_cb)
+
+                return NOT_DONE_YET
+
+            def updateShared_cb(iv):
+                print "Updating file..."
+                self.processCookie("/shares")
+                agent = CookieAgent(Agent(reactor), self.cookie_jar)
+                dataq = []
+                dataq.append( iv )
+                # print "debugging:ticket, iv updatefile"
+                # print dataq[0]
+                # print dataq[1]
+                # print len(dataq[1])
+                print "Uploading file..."
+                enc_file = open("enc_fileout", 'r')
+                body = _FileProducer(enc_file ,dataq)
+                headers = http_headers.Headers()
+                d = agent.request(
+                    'POST',
+                    'http://localhost:8000/shares/?method=updateshared&ccid='
+                    + self.ccid + "&name=" + os.path.basename(s[3]) + "&fileid=" + s[2] ,
+                    headers,
+                    body)
+                d.addCallback(self.printPutReply_cb)
+
+                return NOT_DONE_YET
+
+            if isinstance(data, basestring):
+                print data
                 return
 
             print "Encrypting file..."
@@ -561,59 +498,33 @@ class SafeBoxClient():
             file = open(s[3], 'r')
             enc_file = open("enc_fileout", 'w')
             crd = self.client_id.encryptFileSym(file, enc_file, key=key)
-
             new_iv =  self.client_id.encryptData(crd[1])
             if s[1] == "shared":
                 return updateShared_cb(new_iv)
             return updateFile_cb(new_iv)
 
-        def updateSharePerm():
-            s = line.split()
-            self.processCookie("/shares")
-            agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            headers = http_headers.Headers()
-            d = agent.request(
-                'POST',
-                'http://localhost:8000/shares/?method=updateshareperm&ccid='
-                + self.ccid + "&rccid=" + s[3] + "&fileid=" + s[2] + "&writeable=" + s[4] ,
-                headers,
-                None)
-            d.addCallback(self.printPutReply_cb)
 
-            return NOT_DONE_YET
+        hsmd_data = (encryptFile_cb, s[2])
+        if s[1] == "file":
+            return self.handleGetFileMData(hsmd_data)
+        return self.handleGetShareMData(hsmd_data)
 
+    def handleUpdateSharePerm(self, s):
+        self.processCookie("/shares")
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+        headers = http_headers.Headers()
+        d = agent.request(
+            'POST',
+            'http://localhost:8000/shares/?method=updateshareperm&ccid='
+            + self.ccid + "&rccid=" + s[3] + "&fileid=" + s[2] + "&writeable=" + s[4] ,
+            headers,
+            None)
+        d.addCallback(self.printPutReply_cb)
 
-        s = line.split()
+        return NOT_DONE_YET
 
-        if len(s) == 5:
-            if s[1] == "shareperm":
-                return updateSharePerm()
-                print "Error: invalid arguments!\n"
-                print "Usage: update shareperm <fileid> <rccid> <true>"
-                return
-
-
-        elif len(s) == 4:
-            if not os.path.exists(s[3]):
-                print "Error: File " + s[3] + " does not exist.\n"
-                return
-            if s[1] == "shared":
-                hsmd_data = (encryptFile_cb, s[2])
-                return self.handleGetShareMData(hsmd_data)
-            if s[1] == "file":
-                hfmd_data = (encryptFile_cb, s[2])
-                return self.handleGetFileMData(hfmd_data)
-            print "Error: invalid arguments!\n"
-            print "Usage: update <file|shared> <fileid> <local file path>"
-            return
-
-        else:
-            if s[1].lower() !="file" and s[1].lower() !="shared":
-                print "Error: invalid arguments!\n"
-                print "Usage: update <file|shared> <fileid> <local file path>"
-                return
-
-
+#Delete Operaions
+#
     # handleDelete: handles delete commands
     def handleDelete(self, line):
         def printDeleteReply_cb(data):
@@ -659,7 +570,8 @@ class SafeBoxClient():
         return
 
 
-
+# Share Operation
+#
     def handleShare(self, line):
 
         def getFKey_cb(data):
