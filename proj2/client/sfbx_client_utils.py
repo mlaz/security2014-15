@@ -260,7 +260,7 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
-        # handleGetFileMData: Handles get pbox metadata operations.
+    # handleGetFileMData: Handles get file metadata operations.
     def handleGetFileMData(self, data):
         #data = (method, fileid)
         def handleGetFileMData_cb(response):
@@ -283,7 +283,7 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
-      # handleGetShareMData: Handles get pbox metadata operations.
+    # handleGetShareMData: Handles get share metadata operations.
     def handleGetShareMData(self, data):
         #data = (method, fileid)
         def handleGetShareMData_cb(response):

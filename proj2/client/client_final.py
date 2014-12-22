@@ -39,10 +39,14 @@ class CommandReceiver(basic.LineReceiver):
         elif method == "getticket":
             return client.handleGetTicket()
         elif method == "help":
-                 self.transport.write("\nThe availabe commands are:\nlist pboxes"
-                                      + "\nlist files\nget file <fileId>\nupdate file <fileId>\n"
-                                      + "\nget pboxinfo <ccid>\n"
-                                      + "delete file <fileId>\nshare file <fileId> <destinationPBoxId>\nquit\n")
+                 self.transport.write("\nThe availabe commands are:\nlist pboxes | list files | list shares"
+                                      + "\nget MData <target's CC Id> | get file MData <file Id> | get share MData <file Id>" +
+                                      + "\nget file <file Id> | get shared <file Id>"
+                                      + "\nput file <file name>\n"
+                                      + "\nupdate file <file Id> <file name> | update shared <file Id> <file name>"
+                                      + "\ndelete file <file Id> | delete shared <file Id> <target's CC Id>"
+                                      + "\nshare file <file Id> <target's CC Id>"
+                                      + "\nquit")
         elif (method == "quit") or (method == "exit"):
             reactor.stop()
             self.transport.write("Bye Bye!")

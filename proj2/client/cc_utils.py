@@ -4,10 +4,13 @@ import sys
 import platform
 from M2Crypto import X509
 
-root = "/usr/share/ca-certificates/mozilla/GTE_CyberTrust_Global_Root.crt"
-ec_raiz = "/home/security/Desktop/ECRaizEstado.crt"
-cc_cert = "/home/security/Desktop/Cartao de Cidadao 001.cer"
+# This paths must be changed before the final commit
+root_cert = "/usr/share/ca-certificates/mozilla/GTE_CyberTrust_Global_Root.crt"
+ecraiz_cert = "/home/security/Desktop/ECRaizEstado.crt"
+cc_cert1 = "/home/security/Desktop/Cartao de Cidadao 001.cer"
+cc_cert2 = "/home/security/Desktop/Cartao de Cidadao 002.cer"
 
+# Auxiliar functions
 def _os2str(os):
 	return ''.join(chr(c) for c in os)
 
@@ -28,12 +31,19 @@ def dump(src, length=8):
 		result += "%s" % (hexa)
 		N += length
 	return result
-	
+
+'''Function to sign a given string with the user's
+   private signature key
+   toSign - the object to be signed
+   pin - pin to login into the card session
+   lib - pykcs11 lib
+   returns the signed data'''
+   	
 def sign(toSign=None, pin=None, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
 	if pin == None:
-		pin = 6214
+		pin = "6214"
 		pin_available = True
 		
 	sign = True
@@ -89,12 +99,20 @@ def sign(toSign=None, pin=None, lib=None):
 
 		except PyKCS11.PyKCS11Error, e:
 			print "Error: ", e
-			
+
+'''Function to verify the signature of user
+   Receives the original and the signed object,
+   searches for the Citizen Signature Key and 
+   verifies the signature. Also receives the pin
+   of the card and the lib to access PyKCS11
+   Returns True if signature verified or False
+   otherwise.'''			
+   
 def verify(original, signed, pin=None, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
 	if pin == None:
-		pin = 6214
+		pin = "6214"
 		pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
@@ -160,11 +178,16 @@ def verify(original, signed, pin=None, lib=None):
 		except PyKCS11.PyKCS11Error, e:
 			print "Error: ", e
 
+'''Function to retrive the Public Key from a CC
+   Receives the pin for the card and the lib to
+   access PyKCS11. Returns an hexadecimal string
+   with the value of the PubKey'''
+
 def getPubCert(pin=None, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
 	if pin == None:
-		pin = 6214
+		pin = "6214"
 	pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
@@ -215,11 +238,15 @@ def getPubCert(pin=None, lib=None):
 		except PyKCS11.PyKCS11Error, e:
 			print "Error: ", e
 
+'''Function to get the Public Key of a CC in the format
+   exponent and modulus, similar to prof. Zuquete ccpam's
+   module. Returns a list with two hexadecimal strings'''
+
 def getPubKey(pin=None, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
 	if pin == None:
-		pin = 6214
+		pin = "6214"
 	pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
@@ -271,11 +298,15 @@ def getPubKey(pin=None, lib=None):
 		except PyKCS11.PyKCS11Error, e:
 			print "Error: ", e
 			
+'''Function to get a list of the certificates in the CC
+   Receives the pin for the card and the lib to access
+   PyKCS11 and returns a list of four X509 certificates'''
+			
 def getCertList(pin=None, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
 	if pin == None:
-		pin = 6214
+		pin = "6214"
 	pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
@@ -317,13 +348,16 @@ def getCertList(pin=None, lib=None):
 		except PyKCS11.PyKCS11Error, e:
 			print "Error: ", e
 
+'''Function to convert the certificates to dict
+   Must likely will be erased for the final commit'''
+
 def certToDict(label, pin=None, lib=None):
 # list of labels used by the ptCC: ["CITIZEN AUTHENTICATION CERTIFICATE", 
 # "AUTHENTICATION SUB CA", "CITIZEN SIGNATURE CERTIFICATE", "SIGNATURE SUB CA"]
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
 	if pin == None:
-		pin = 6214
+		pin = "6214"
 		pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
@@ -370,27 +404,42 @@ def certToDict(label, pin=None, lib=None):
 		except PyKCS11.PyKCS11Error, e:
 			print "Error: ", e
 
+'''Function to verify the chain of trust between certificates
+   Receives two X509 certificates (run the getCertList function
+   first) and returns True if the chain is verified and False
+   otherwise.
+   If the getCertList function is called before, the function
+   must return True with the pairs 0/1 and 2/3 of the list
+   returned by that function'''
+
 def certChain(cert, sub_ca):
-	root_ca = X509.load_cert(root)
-	ecraiz_ca = X509.load_cert(ec_raiz)
-	cccert_ca = X509.load_cert(cc_cert, format=0)
+	root = X509.load_cert(root_cert)
+	ecraiz = X509.load_cert(ecraiz_cert)
+	
+	if "001" not in sub_ca.get_issuer().as_text():
+		cccert = X509.load_cert(cc_cert2, format=0)
+	else:
+		cccert = X509.load_cert(cc_cert1, format=0)
+	
+	t1 = False
 	
 	if sub_ca.get_subject().as_text() == cert.get_issuer().as_text():
 		pkey = sub_ca.get_pubkey()
 		if not cert.verify(pkey):
-			print "aqui1"
 			return False
-		elif cccert_ca.get_subject().as_text() == sub_ca.get_issuer().as_text():
-			print "aqui2"
-			pkey = cccert_ca.get_pubkey()
+		elif cccert.get_subject().as_text() == sub_ca.get_issuer().as_text():
+			pkey = cccert.get_pubkey()
 			if not sub_ca.verify(pkey):
-				print "aqui3"
 				return False
-			elif ecraiz_ca.get_subject().as_text() == cccert_ca.get_issuer().as_text():
-				print "aqui4"
-				pkey = ecraiz_ca.get_pubkey()
-				if cccert_ca.verify(pkey):
-					print "aqui5"
-					return True
+			elif ecraiz.get_subject().as_text() == cccert.get_issuer().as_text():
+				pkey = ecraiz.get_pubkey()
+				if cccert.verify(pkey):
+					t1 = True
+	
+	if t1:
+		pkey = root.get_pubkey()
+		if root.verify(pkey):
+			return True
+	
 	return False
 	
