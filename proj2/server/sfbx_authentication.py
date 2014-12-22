@@ -17,8 +17,9 @@ class TicketManager(object):
         self.active_tickets = {}
 
     # removeTicket_cb: removes a ticket
-    def removeTicket_cb(self, pboxid):
-        del self.active_tickets[pboxid]
+    def removeTicket(self, pboxid):
+        if pboxid in self.active_tickets.keys():
+            del self.active_tickets[pboxid]
 
     #generateTicket: returns base64 encoded ticket
     def generateTicket(self, pboxid, cli_key):
@@ -27,12 +28,11 @@ class TicketManager(object):
             del self.active_tickets[pboxid]
 
         ticket = Random.get_random_bytes(64)
-#        pprint(ticket)
-#        print type(ticket)
+        #pprint(ticket)
+        #print type(ticket)
         #cli_key = RSA.importKey(cli_key)
         enc_ticket = self.server.encryptData(str(ticket) , cli_key)
-        timeout = reactor.callLater(TICKET_TIMEOUT * 60, self.removeTicket_cb, pboxid)
-        self.active_tickets.update({pboxid: {'ticket': ticket,  'timeout': timeout}})
+        self.active_tickets.update({pboxid: {'ticket': ticket}})
         return enc_ticket
 
     def getTicket(self, pboxid, cli_key):
@@ -44,12 +44,10 @@ class TicketManager(object):
     def validateTicket(self,signature, pboxid, cli_key):
         original = ""
         if pboxid in self.active_tickets.keys():
-            self.active_tickets[pboxid]['timeout'].cancel()
             #print "Original:", number.bytes_to_long(self.active_tickets[pboxid]['ticket'])
             original = number.long_to_bytes(number.bytes_to_long(self.active_tickets[pboxid]['ticket']) + long("1", base=10))
             #print "Incrementado:", number.bytes_to_long(original)
-            timeout = reactor.callLater(TICKET_TIMEOUT * 60, self.removeTicket_cb, pboxid)
-            self.active_tickets[pboxid] = {'ticket': original,  'timeout': timeout}
+            self.active_tickets[pboxid] = {'ticket': original}
         else:
             return False
 
@@ -63,9 +61,10 @@ class TicketManager(object):
 # A Session is only valid for a single request and lasts for <SESSION_TIMEOUT> minutes.
 class SessionManager(object):
 
-    def __init__(self, identity):
+    def __init__(self, identity, ticket_manager):
         self.server = identity
         self.authm = AuthManager(identity)
+        self.ticket_manager = ticket_manager
         self.active_sessions = {}
 
     def getNonce(self, cli_key):
@@ -73,10 +72,10 @@ class SessionManager(object):
 
     def startSession(self, signature, nonceid, cli_key, pboxid):
         if pboxid in self.active_sessions.keys():
-            del self.active_sessions[pboxid]
+            self.killSession(pboxid)
 
         if self.authm.validateNonce (signature, nonceid, cli_key):
-            timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession_cb, pboxid)
+            timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession, pboxid)
             self.active_sessions.update({pboxid : timeout})
             return True
         else:
@@ -85,22 +84,24 @@ class SessionManager(object):
     def hasSession(self, pboxid):
         return pboxid in self.active_sessions.keys()
 
-    def killSession_cb(self, pboxid):
-        del self.active_sessions[pboxid]
+    def killSession(self, pboxid):
+        if pboxid in self.active_sessions.keys():
+            if not self.active_sessions[pboxid].called:
+                self.active_sessions[pboxid].cancel()
+            self.ticket_manager.removeTicket(pboxid)
+            del self.active_sessions[pboxid]
+            print "(SessionManager:KillSesson) Session killed for pboxid: ", pboxid
+        else:
+            print "(SessionManager:KillSession) Session not found for pboxid: ", pboxid
 
     def refreshSession(self, pboxid):
         if pboxid in self.active_sessions.keys():
-            self.active_sessions[pboxid].cancel()
-            timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession_cb, pboxid)
+            if not self.active_sessions[pboxid].called:
+                self.active_sessions[pboxid].cancel()
+            timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession, pboxid)
             self.active_sessions[pboxid] = timeout
         else:
-            print "(SessionManager:RefreshSesson) Session not found for pboxid: " + pboxid
-
-    def finishSession(self, pboxid):
-        if pboxid in self.active_sessions.keys():
-            del self.active_sessions[pboxid]
-        else:
-            print "(SessionManager:FinishSession) Session not found for pboxid: " + pboxid
+            print "(SessionManager:RefreshSesson) Session not found for pboxid: ", pboxid
 
 # class AuthManager:
 # This class provides a facility for generating and validating authentication challange nonces
@@ -139,7 +140,6 @@ class AuthManager(object):
             del self.active_nonces[nonceid]
         else:
             return False
-
 
         cli_key = RSA.importKey(cli_key)
         print original

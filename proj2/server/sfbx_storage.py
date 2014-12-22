@@ -199,6 +199,16 @@ class SafeBoxStorage(object):
         d.addCallback(registerPBox_cb)
         return NOT_DONE_YET
 
+    # deletePBox(): Deletes an entry on PBox table.
+    # Used when a client fails to start session opon registry.
+    def deletePBox(self, pboxid):
+        df = self.dbpool.runQuery(
+            "DELETE " +
+            "FROM PBox " +
+            "WHERE PBoxId = ?",
+            (pboxid, ))
+        return df
+
     # File related operations:
     #
     # listFiles(): Retrieves FileName and FileId attributes for a given pboxid.
@@ -818,4 +828,3 @@ class SafeBoxStorage(object):
             "AND Share.ForeignPBoxId = ?", (pboxid,));
         d.addCallback(listShares_cb)
         return NOT_DONE_YET
-
