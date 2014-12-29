@@ -39,6 +39,8 @@ class ClientIdentity(object):
         self.pub_key = RSA.importKey(file.read(), password)
         file.close()
 
+        self.password = password
+
         if server_key is not None: ## it only is None for testing purposes
             self.server_key = RSA.importKey(server_key)
 
@@ -114,7 +116,6 @@ class ClientIdentity(object):
         src_file.close()
         dst_file.close()
         return (key, iv)
-
 
 
 # Some utilities:

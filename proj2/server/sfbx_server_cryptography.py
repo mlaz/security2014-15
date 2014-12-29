@@ -2,7 +2,7 @@ from twisted.internet import defer, reactor
 
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
+from Crypto.Hash import SHA256, HMAC
 from Crypto import Random
 
 from base64 import b64encode, b64decode
@@ -53,3 +53,12 @@ class ServerIdentity(object):
         verifier = PKCS1_v1_5.new(key)
         hash = SHA256.new(data)
         return verifier.verify(hash, str(signature))
+
+    def genHash(self, passwd, salt=None):
+        if not salt:
+            salt = Random.get_random_bytes(SHA256.digest_size)
+        print salt
+        hash = HMAC.new(salt, digestmod=SHA256)
+        hash.update(str(passwd))
+        return (b64encode(hash.hexdigest()), self.encryptData(salt))
+

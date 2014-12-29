@@ -11,6 +11,7 @@ from sfbx_authentication import TicketManager, SessionManager
 from sfbx_storage import SafeBoxStorage, strip_text
 
 NONCE_SIZE = 172 # size of signed nonce
+USR_PASSWD_SIZE = 172
 RSA_KEY_SIZE = 271
 
 #
@@ -155,9 +156,17 @@ class AccessCtrlHandler(object):
 
     # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
     def handleRegisterPBox(self, request):
+        def handleGetSession(data, request, nonce):
+            if len(data) != 0:
+                reply_dict = { 'status': {'error': "Unsuccessful db transaction", 'message': "N/A"} }
+                request.write(json.dumps(reply_dict, encoding="utf-8"));
+                request.finish()
+            else:
+                return self.handleStartSession(request, nonce)
+
 
         # Checking if the client exists.
-        def checkClientExists_cb(data, nonce, key_txt):
+        def checkClientExists_cb(data, nonce, key_txt, passwd_hash, salt):
             if data:
                 reply_dict = { 'status': {'error': "Invalid Request",
                                           'message': 'User already exists.'} }
@@ -165,17 +174,29 @@ class AccessCtrlHandler(object):
                 request.finish()
             else:
                 #TODO: validate certificates and keys here
-                d = self.storage.registerPBox(request, key_txt)
-                d.addCallback(self.handleGetSession, request, nonce)
+                d = self.storage.registerPBox(request, key_txt, passwd_hash, salt)
+                d.addCallback(handleGetSession, request, nonce)
                 return NOT_DONE_YET
 
-        # Validating key.
+        #TODO: integrate this with content integrity validation
         nonce = request.content.read(NONCE_SIZE)
         if not nonce:
             reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No challange nonce on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
 
+        # Hashing password:
+        passwd = request.content.read(NONCE_SIZE)
+        print "Password:", passwd
+        print type(passwd), "LEN:",len(passwd)
+        cli_passwd = self.server.decryptData(passwd)
+        if not cli_passwd:
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "Invalid format for password on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+        (passwd_hash, salt) = self.server.genHash(cli_passwd)
+
+        # Validating key:
         key_txt = request.content.read(RSA_KEY_SIZE)
         if not key_txt:
             reply_dict = { 'status': {'error': "Invalid Request",
@@ -189,7 +210,8 @@ class AccessCtrlHandler(object):
             return json.dumps(reply_dict, encoding="utf-8")
 
         d = self.storage.getClientData(request)
-        d.addCallback(checkClientExists_cb, nonce, key_txt)
+        d.addCallback(checkClientExists_cb, nonce, key_txt, passwd_hash, salt)
+
         return NOT_DONE_YET
 
     # Handling Files resource related operations:

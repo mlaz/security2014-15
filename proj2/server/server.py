@@ -56,6 +56,10 @@ class Session(Resource):
     # 'method' = "start"
     # 'ccid' = <user's Portuguese Cityzen Card number>
     # 'name' = <user's real name>
+    # Data expected on request Body:
+    #  A Signed Nonce.
+    #  The Client's RSA Key.
+    #  User's password
     def render_PUT(self, request):
         error = None;
         if 'method' not in request.args.keys():
@@ -75,9 +79,13 @@ class Session(Resource):
                 error = { 'status': {'error': "Invalid Request",
                          'message': "Argument 'name' not specified."} }
 
-            # if ('pubkey' not in request.args.keys()) & (error == None):
+            if ('nonceid' not in request.args.keys()) & (error == None):
+                error = { 'status': {'error': "Invalid Request",
+                         'message': "Argument 'nonceid' not specified."} }
+
+            # if ('password' not in request.args.keys()) & (error == None):
             #     error = { 'status': {'error': "Invalid Request",
-            #              'message': "Argument 'pubkey' not specified."} }
+            #              'message': "Argument 'password' not specified."} }
 
             elif (error == None):
                 return handler.handleRegisterPBox(request);

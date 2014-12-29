@@ -31,18 +31,19 @@ class SafeBoxClient():
         self.cookie_jar = CookieJar()
         self.curr_ticket = ""
 
-    #initializes the client's remaining attributes
+    # startClient: Initializes the client's remaining attributes,
+    # this implies starting a session and eventually client registration.
     def startClient(self, ccid, passwd, name):
 
         # checking if client is already registered
         def checkClientReg_cb(success):
             if success == False:
-                print "User not registered..."
-                if name is "":
+                print "User not registered."
+                if name is "":#TODO replace this with fetching user data from CC
                     print "Please provide your name for registry."
                     reactor.stop()
                 else:
-                    print "Registering user."
+                    print "Registering user..."
                     return self.handleRegister(name)
             #pprint(self.cookie_jar.__dict__)
             for cookie in self.cookie_jar:
@@ -60,7 +61,8 @@ class SafeBoxClient():
 
 # Session, Registry and Authentication related opreations
 #
-    # handleGetKey: handles getkey operations
+    # handleGetKey: handles getkey operations, this happens as the
+    # first step of the startClient operation.
     def handleGetKey(self, method):
         def handleGetKey_cb(response):
             defer = Deferred()
@@ -80,7 +82,7 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
-    # handleGetNonce: handles startsession operations
+    # handleStartSession: handles startsession operations
     def handleStartSession(self, method):
         def procResponse_cb(response):
             defer = Deferred()
@@ -90,7 +92,9 @@ class SafeBoxClient():
 
         def startSession_cb((signedNonce, nonceid)):
             agent = CookieAgent(Agent(reactor), self.cookie_jar)
-            body = FileBodyProducer(StringIO(signedNonce))
+            dataq = []
+            dataq.append(signedNonce)
+            body = _FileProducer(StringIO(self.client_id.encryptData(self.client_id.password)) ,dataq)
             headers = http_headers.Headers()
 	    d = agent.request(
                 'PUT',
@@ -120,6 +124,7 @@ class SafeBoxClient():
 
         return NOT_DONE_YET
 
+    # handleRegister: Handles the registration process. Also part of the startClient operation.
     def handleRegister(self, name):
         def checkClientReg_cb(success):
             if success == False:
@@ -131,8 +136,8 @@ class SafeBoxClient():
                 #print cookie
                 #print type(cookie)
                 self.curr_ticket = self.client_id.decryptData(cookie.value)
-
-        def procResponse_cb(checkClientReg_cb):
+            print "Registration Successful."
+        def procResponse_cb(response, method):
             defer = Deferred()
             defer.addCallback(method)
             response.deliverBody(DataPrinter(defer, "bool"))
@@ -143,8 +148,11 @@ class SafeBoxClient():
             agent = CookieAgent(Agent(reactor), self.cookie_jar)
             dataq = []
             dataq.append(signedNonce)
+            dataq.append(self.client_id.encryptData(self.client_id.password))
             body = _FileProducer(StringIO(self.client_id.pub_key.exportKey('PEM')) ,dataq)
             headers = http_headers.Headers()
+            #print "Password:", self.client_id.encryptData(self.client_id.password)
+            #print "LEN:", len(self.client_id.encryptData(self.client_id.password))
             d = agent.request(
                 'PUT',
                 'http://localhost:8000/pboxes/?method=register&ccid='
@@ -153,7 +161,7 @@ class SafeBoxClient():
                 + '&nonceid=' + str(nonceid),
                 headers,
                 body)
-            d.addCallback(procResponse_cb)
+            d.addCallback(procResponse_cb, checkClientReg_cb)
 
         def getNonce_cb(response):
             defer = Deferred()
