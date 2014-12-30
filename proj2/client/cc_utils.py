@@ -115,6 +115,9 @@ def verify(original, signed, pin=None, lib=None):
 		pin = "6214"
 		pin_available = True
 
+	x = len(original)
+	print x
+
 	pkcs11 = PyKCS11.PyKCS11Lib()
 	pkcs11.load(lib)
 
@@ -159,9 +162,9 @@ def verify(original, signed, pin=None, lib=None):
 						decrypted = pow(sx, ex, mx)
 						print "Original: ", original
 						d = hexx(decrypted).decode('hex')
-						print "Decrypted: ", d[-20:]
+						print "Decrypted: ", d[-x:]
 
-						if original == d[-20:]:
+						if original == d[-x:]:
 							print "Sig verified"
 							return True
 						else:
@@ -442,4 +445,3 @@ def certChain(cert, sub_ca):
 			return True
 	
 	return False
-	
