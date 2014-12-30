@@ -62,15 +62,20 @@ class AccessCtrlHandler(object):
 
     # handleStartSession: handles start session requests.
     def handleStartSession(self, request, nonce=None):
-        if not nonce:
-            nonce = request.content.read(NONCE_SIZE)
         nonceid = strip_text(str(request.args['nonceid']))
         nonceid = int(nonceid)
-        if not nonce:
-            reply_dict = { 'status': {'error': "Invalid Request",
-                                      'message': "No challange nonce on request body."} }
-            return json.dumps(reply_dict, encoding="utf-8")
+        if nonceid > -1:
+            if not nonce:
+                nonce = request.content.read(NONCE_SIZE)
 
+            if not nonce:
+                reply_dict = { 'status': {'error': "Invalid Request",
+                                          'message': "No challange nonce on request body."} }
+                return json.dumps(reply_dict, encoding="utf-8")
+        else:
+            nonce = Null
+
+        passwd = request.content.read(USR_PASSWD_SIZE)
 
         def handleStartSession_cb(data):
             if not data:
@@ -80,10 +85,11 @@ class AccessCtrlHandler(object):
             else:
                 pboxid = data[0][0]
                 pubkey = data[0][1]
-                print pubkey
-
-                print "encripted nonce: ", nonce
-                if self.session_manager.startSession(nonce, nonceid, pubkey, pboxid):
+                salt = self.server.decryptData(data[0][2]) #TODO: STORE THIS ENCRYPTED
+                #print pubkey
+                print salt
+                #print "encripted nonce: ", nonce
+                if self.session_manager.startSession(nonce, nonceid, pubkey, pboxid, salt, passwd):
                     print "Valid Nonce!"
                     reply_dict = { 'status': "OK" }
                     ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
@@ -186,7 +192,7 @@ class AccessCtrlHandler(object):
             return json.dumps(reply_dict, encoding="utf-8")
 
         # Hashing password:
-        passwd = request.content.read(NONCE_SIZE)
+        passwd = request.content.read(CLI_PASSWD_SIZE)
         print "Password:", passwd
         print type(passwd), "LEN:",len(passwd)
         cli_passwd = self.server.decryptData(passwd)

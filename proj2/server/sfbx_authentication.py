@@ -6,6 +6,8 @@ from Crypto.PublicKey import RSA
 
 from sfbx_server_cryptography import ServerIdentity
 
+import pam
+
 NONCE_TIMEOUT = 3
 TICKET_TIMEOUT = 3
 TICKET_SIZE = 172 # size of signed ticket
@@ -70,7 +72,15 @@ class SessionManager(object):
     def getNonce(self, cli_key):
         return self.authm.generateNonce(cli_key)
 
-    def startSession(self, signature, nonceid, cli_key, pboxid):
+    def startSession(self, signature, nonceid, cli_key, pboxid, salt, passwd):
+        p = pam.pam()
+        pwd = self.server.decryptData(passwd)
+        (pwd_hash, s) = self.server.genHash(pwd, salt)
+        if p.authenticate(str(pboxid), pwd_hash, service='myservice') != True:
+            print "Wrong Password!"
+            return False
+
+        print "Password Accepted!"
         if pboxid in self.active_sessions.keys():
             self.killSession(pboxid)
 

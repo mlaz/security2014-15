@@ -112,7 +112,7 @@ class SafeBoxStorage(object):
         ccid_str = strip_text(ccid_str)
 
         d = self.dbpool.runQuery(
-            "SELECT PBoxId, PubKey FROM PBox WHERE UserCCId = ?", (ccid_str,))
+            "SELECT PBoxId, PubKey, Salt FROM PBox WHERE UserCCId = ?", (ccid_str,))
         return d
 
     # listPBoxes(): Queries for all entries on PBox's basic meta-data attributes.
