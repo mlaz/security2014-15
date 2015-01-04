@@ -437,11 +437,13 @@ def certChain(cert, sub_ca):
 			elif ecraiz.get_subject().as_text() == cccert.get_issuer().as_text():
 				pkey = ecraiz.get_pubkey()
 				if cccert.verify(pkey):
-					t1 = True
+					if ecraiz.verify(pkey):
+						return True
+					#t1 = True
 	
-	if t1:
+	'''if t1:
 		pkey = root.get_pubkey()
 		if root.verify(pkey):
-			return True
+			return True'''
 	
 	return False

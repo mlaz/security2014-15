@@ -6,7 +6,7 @@ c = a.getCertList()
 print "The list: ", c
 print "The first certificate: ", c[0]
 # The function as_text() is available so that the certificate is more "human-friendly"
-# print c[0].as_text()
+# print c[0].as_text()c
 print "Getting the public key from that certificate"
 k = c[0].get_pubkey()
 print "The certificate's public key: ", k
@@ -19,3 +19,7 @@ print st
 
 v = a.verify(s, st)
 print v
+
+print "Verifing the trust chain in the certificates"
+print "authentication cert: ", a.certChain(c[0], c[1])
+print "signature cert: ", a.certChain(c[2], c[3])
