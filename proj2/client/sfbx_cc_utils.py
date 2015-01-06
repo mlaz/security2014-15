@@ -6,6 +6,7 @@ from base64 import b64encode
 PKCS11_LIB = "/usr/local/lib/libpteidpkcs11.so"
 ASN1_UTF8_FLGS = 0x10 #ASN1_STRFLGS_UTF8_CONVERT
 CERT_LABEL = "CITIZEN AUTHENTICATION CERTIFICATE"
+SUBCA_LABEL = "AUTHENTICATION SUB CA"
 KEY_LABEL = "CITIZEN AUTHENTICATION KEY"
 
 # Returns an M2Crypto.X509.X509 certicicate foa given label (CKA_LABEL).
@@ -59,5 +60,5 @@ def sign(data, label, pin):
     sig = session.sign(key, data, mech)
     ret = ''.join(chr(c) for c in sig)
     print "ORIGINAL SIGNATURE: " + ret
-    return b64encode(ret)
+    return ret
 
