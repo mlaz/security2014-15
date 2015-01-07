@@ -10,7 +10,7 @@ import sfbx_cc_utils as b
 from sfbx_client_cryptography import *
 
 # CHANGE THIS BEFORE TESTING
-pin = "6214"
+pin = ""
 
 # retriving the auth cert and the auth sub ca
 # CLIENT SIDE

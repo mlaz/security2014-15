@@ -1,14 +1,14 @@
 import PyKCS11
-import getopt
 import sys
 import platform
 from M2Crypto import X509
 
 # This paths must be changed before the final commit
-root_cert = "/usr/share/ca-certificates/mozilla/GTE_CyberTrust_Global_Root.crt"
-ecraiz_cert = "/home/security/Desktop/ECRaizEstado.crt"
-cc_cert1 = "/home/security/Desktop/Cartao de Cidadao 001.cer"
-cc_cert2 = "/home/security/Desktop/Cartao de Cidadao 002.cer"
+ecraiz_cert = "../server/certificates/ECRaizEstado.crt"
+cc_cert1 = "../server/certificates/Cartao de Cidadao 001.cer"
+cc_cert2 = "../server/certificates/Cartao de Cidadao 002.cer"
+
+ASN1_UTF8_FLGS = 0x10 #ASN1_STRFLGS_UTF8_CONVERT
 
 # Auxiliar functions
 def _os2str(os):
@@ -39,14 +39,9 @@ def dump(src, length=8):
    lib - pykcs11 lib
    returns the signed data'''
    	
-def sign(toSign=None, pin=None, lib=None):
+def sign(pin, toSign=None, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
-	if pin == None:
-		pin = "6214"
-		pin_available = True
-		
-	sign = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
 	pkcs11.load(lib)
@@ -60,7 +55,6 @@ def sign(toSign=None, pin=None, lib=None):
 				session.login(pin)
 			except:
 				pass
-				#print "login failed: ", str(sys.exc_info()[1])
 
 			objects = session.findObjects()
 		
@@ -108,12 +102,9 @@ def sign(toSign=None, pin=None, lib=None):
    Returns True if signature verified or False
    otherwise.'''			
    
-def verify(original, signed, pin=None, lib=None):
+def verify(original, signed, pin, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
-	if pin == None:
-		pin = "6214"
-		pin_available = True
 
 	x = len(original)
 	print x
@@ -186,12 +177,9 @@ def verify(original, signed, pin=None, lib=None):
    access PyKCS11. Returns an hexadecimal string
    with the value of the PubKey'''
 
-def getPubCert(pin=None, lib=None):
+def getPubCert(pin, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
-	if pin == None:
-		pin = "6214"
-	pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
 	pkcs11.load(lib)
@@ -245,12 +233,9 @@ def getPubCert(pin=None, lib=None):
    exponent and modulus, similar to prof. Zuquete ccpam's
    module. Returns a list with two hexadecimal strings'''
 
-def getPubKey(pin=None, lib=None):
+def getPubKey(pin, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
-	if pin == None:
-		pin = "6214"
-	pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
 	pkcs11.load(lib)
@@ -305,12 +290,9 @@ def getPubKey(pin=None, lib=None):
    Receives the pin for the card and the lib to access
    PyKCS11 and returns a list of four X509 certificates'''
 			
-def getCertList(pin=None, lib=None):
+def getCertList(pin, lib=None):
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
-	if pin == None:
-		pin = "6214"
-	pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
 	pkcs11.load(lib)
@@ -354,14 +336,11 @@ def getCertList(pin=None, lib=None):
 '''Function to convert the certificates to dict
    Must likely will be erased for the final commit'''
 
-def certToDict(label, pin=None, lib=None):
+def certToDict(label, pin, lib=None):
 # list of labels used by the ptCC: ["CITIZEN AUTHENTICATION CERTIFICATE", 
 # "AUTHENTICATION SUB CA", "CITIZEN SIGNATURE CERTIFICATE", "SIGNATURE SUB CA"]
 	if lib == None:
 		lib = "/usr/local/lib/libpteidpkcs11.so"
-	if pin == None:
-		pin = "6214"
-		pin_available = True
 
 	pkcs11 = PyKCS11.PyKCS11Lib()
 	pkcs11.load(lib)
@@ -414,9 +393,10 @@ def certToDict(label, pin=None, lib=None):
    If the getCertList function is called before, the function
    must return True with the pairs 0/1 and 2/3 of the list
    returned by that function'''
+   
+# THIS FUNCTION MUST BE ON THE SERVER SIDE
 
 def certChain(cert, sub_ca):
-	root = X509.load_cert(root_cert)
 	ecraiz = X509.load_cert(ecraiz_cert)
 	
 	if "001" not in sub_ca.get_issuer().as_text():
@@ -439,11 +419,5 @@ def certChain(cert, sub_ca):
 				if cccert.verify(pkey):
 					if ecraiz.verify(pkey):
 						return True
-					#t1 = True
-	
-	'''if t1:
-		pkey = root.get_pubkey()
-		if root.verify(pkey):
-			return True'''
 	
 	return False
