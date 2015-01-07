@@ -132,7 +132,7 @@ def main(args):
     else:
 		cert = cc.get_certificate(cc.CERT_LABEL, pin)
 		if cert is None:
-			sys.exit(0)
+			sys.exit("PIN WRONG!")
 		user_data = cc.get_subjdata_from_cert(cert)
 		uname = user_data[0]
 		ccid = user_data[1]
@@ -151,4 +151,4 @@ def main(args):
     reactor.run()
 
 if __name__ == "__main__":
-	main(args)t
+	main(args)
