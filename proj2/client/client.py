@@ -1,7 +1,15 @@
 from twisted.internet import stdio, reactor
 from twisted.protocols import basic
 from sfbx_client_utils import SafeBoxClient
-import sys, os
+import sfbx_cc_utils as cc
+import sys, os, argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-pw', '--pwd', required=True, help="password to access the RSA Key in the system")
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('-p', '--pin', help="pin to access the Citizen Card")
+group.add_argument('-c', '--ccid', help="the CC number, when no CC is given")
+args = parser.parse_args()
 
 class CommandReceiver(basic.LineReceiver):
     delimiter = "\n"
@@ -113,24 +121,34 @@ class CommandReceiver(basic.LineReceiver):
             self.transport.write("Bye Bye!")
         else:
             self.transport.write("Error: no such command.\n")
-
-if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        sys.exit('Usage: %s <userccid> <password> <name(optional)>' % sys.argv[0])
-
-    # TODO: parse arguments propperly i.e.:Check password length
-
-    # dirname for the .pem files = user ccid
-    if not os.path.exists(sys.argv[1]):
-        sys.exit('ERROR: Directiry %s not found!' % sys.argv[1])
-
-    if len(sys.argv) > 3:
-        uname = sys.argv[3]
+	
+def main(args):
+    pwd = args.pwd
+    pin = args.pin
+    
+    if pin is None:
+		uname = "Test Subject"
+		ccid = args.ccid	
     else:
-        uname = ""
+		cert = cc.get_certificate(cc.CERT_LABEL, pin)
+		if cert is None:
+			sys.exit(0)
+		user_data = cc.get_subjdata_from_cert(cert)
+		uname = user_data[0]
+		ccid = user_data[1]
+		ccid = ccid[2:]
+    
+    print uname, ccid, pwd, pin
+
+	# dirname for the .pem files = user ccid
+    if not os.path.exists(ccid):
+        sys.exit('ERROR: Directory %s not found!' % ccid)
 
     client =  SafeBoxClient()
     stdio.StandardIO(CommandReceiver())
 
-    reactor.callLater(0, client.startClient, sys.argv[1], sys.argv[2], uname)
+    reactor.callLater(0, client.startClient, ccid, pwd, uname, pin)
     reactor.run()
+
+if __name__ == "__main__":
+	main(args)t
