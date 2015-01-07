@@ -2,6 +2,7 @@ from StringIO import StringIO
 from Crypto import Random
 from Crypto.PublicKey import RSA
 from Crypto.Hash import HMAC, SHA256
+import sys
 import sqlite3
 import PAM
 import pprint
@@ -10,7 +11,10 @@ import sfbx_cc_utils as b
 from sfbx_client_cryptography import *
 
 # CHANGE THIS BEFORE TESTING
-pin = ""
+pin = None
+if pin is None:
+	print "You forgot to change the pin to test!"
+	sys.exit(0)
 
 # retriving the auth cert and the auth sub ca
 # CLIENT SIDE
