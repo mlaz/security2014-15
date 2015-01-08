@@ -53,7 +53,7 @@ class Session(Resource):
     # PUT Methods:
     #
     # register: To register (create) a new PBox.
-    # 'method' = "start"
+    # 'method' = "register"
     # 'ccid' = <user's Portuguese Cityzen Card number>
     # 'name' = <user's real name>
     # Data expected on request Body:
@@ -67,28 +67,27 @@ class Session(Resource):
                      'message': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        # register:
-        if request.args['method'] == ['register']:
-            print request.args['method']
+        # # register:
+        # if request.args['method'] == ['register']:
+        #     print request.args['method']
+        #     # if 'ccid' not in request.args.keys():
+        #     #     error = { 'status': {'error': "Invalid Request",
+        #     #              'message': "Argument 'ccid' not specified."} }
 
-            if 'ccid' not in request.args.keys():
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'ccid' not specified."} }
+        #     # if ('name' not in request.args.keys()) & (error == None):
+        #     #     error = { 'status': {'error': "Invalid Request",
+        #     #              'message': "Argument 'name' not specified."} }
 
-            if ('name' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'name' not specified."} }
+        #     if ('nonceid' not in request.args.keys()) & (error == None):
+        #         error = { 'status': {'error': "Invalid Request",
+        #                  'message': "Argument 'nonceid' not specified."} }
 
-            if ('nonceid' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'nonceid' not specified."} }
+        #     # if ('password' not in request.args.keys()) & (error == None):
+        #     #     error = { 'status': {'error': "Invalid Request",
+        #     #              'message': "Argument 'password' not specified."} }
 
-            # if ('password' not in request.args.keys()) & (error == None):
-            #     error = { 'status': {'error': "Invalid Request",
-            #              'message': "Argument 'password' not specified."} }
-
-            elif (error == None):
-                return handler.handleRegisterPBox(request);
+        #     elif (error == None):
+        #         return handler.handleRegisterPBox(request);
 
         # startsession:
         if request.args['method'] == ['startsession']:
@@ -226,13 +225,13 @@ class PBoxes(Resource):
         if request.args['method'] == ['register']:
             print request.args['method']
 
-            if 'ccid' not in request.args.keys():
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'ccid' not specified."} }
+            # if 'ccid' not in request.args.keys():
+            #     error = { 'status': {'error': "Invalid Request",
+            #              'message': "Argument 'ccid' not specified."} }
 
-            if ('name' not in request.args.keys()) & (error == None):
-                error = { 'status': {'error': "Invalid Request",
-                         'message': "Argument 'name' not specified."} }
+            # if ('name' not in request.args.keys()) & (error == None):
+            #     error = { 'status': {'error': "Invalid Request",
+            #              'message': "Argument 'name' not specified."} }
 
             if ('nonceid' not in request.args.keys()) & (error == None):
                 error = { 'status': {'error': "Invalid Request",

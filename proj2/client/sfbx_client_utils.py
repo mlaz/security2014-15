@@ -22,7 +22,7 @@ import Cookie
 
 from sfbx_client_cryptography import *
 from sfbx_client_protocols import *
-from sfbx_fs_utils import _FileProducer
+from sfbx_fs_utils import _FileProducer, FileProducer2
 import sfbx_cc_utils as cc
 
 # SafeBoxClient():
@@ -168,12 +168,17 @@ class SafeBoxClient():
             if subca is None:
                 print "ERROR! Check the pin"
                 reactor.stop()
-            print "cert len: ", len(self.client_id.encryptData(cert.as_pem()))
-            print "sub ca len: ", len(self.client_id.encryptData(subca.as_pem()))
-            dataq.append(self.client_id.encryptData(cert.as_pem()))
-            dataq.append(self.client_id.encryptData(subca.as_pem()))
-                
-            body = _FileProducer(StringIO(self.client_id.pub_key.exportKey('PEM')) ,dataq)
+#            print "cert len: ", len(self.client_id.encryptData(cert.as_pem()))
+ #           print "sub ca len: ", len(self.client_id.encryptData(subca.as_pem()))
+            enc_cert = b64encode(cert.as_pem())
+            print "cert len: ", len(enc_cert)
+            dataq.append(enc_cert)
+
+            enc_subca = b64encode(subca.as_pem())
+            print "sub ca len: ", len(enc_subca)
+            dataq.append(enc_subca)
+            dataq.append(self.client_id.pub_key.exportKey('PEM'))
+            body = FileProducer2(dataq)
             headers = http_headers.Headers()
             #print "Password:", self.client_id.encryptData(self.client_id.password)
             #print "LEN:", len(self.client_id.encryptData(self.client_id.password))

@@ -62,8 +62,8 @@ class FD2FileProducer(object):
 
         data = None
         if not self._file.closed:
-            data = self._file.read(self.chunksize)
-
+            data = self._file.read(self.chunksize
+)
             if data:
                 self._consumer.write(data)
                 self._scheduleSomeProducing()
@@ -101,18 +101,24 @@ class SafeBoxStorage(object):
     from sfbx_access_control import ServerIdentity
 
     def __init__(self, server_id, dbfilename="safebox.sqlite"):
-        self.dbpool = adbapi.ConnectionPool("sqlite3", dbfilename, check_same_thread=False)
+        #sets up the textfactory
+        def cpopen(conn):
+            conn.text_factory = str
+
+        self.dbpool = adbapi.ConnectionPool("sqlite3", dbfilename,
+                                            check_same_thread=False, cp_openfun=cpopen)
         self.sid = server_id
 # PBox related operations:
 #
 
     # getClientData(): Retreives PBoxId and PubKey for internal usage.
-    def getClientData(self, request):
-        ccid_str = str(request.args['ccid'])
-        ccid_str = strip_text(ccid_str)
+    def getClientData(self, request, ccid=None):
+        if ccid == None:
+            ccid = str(request.args['ccid'])
+            ccid = strip_text(ccid)
 
         d = self.dbpool.runQuery(
-            "SELECT PBoxId, PubKey, Salt FROM PBox WHERE UserCCId = ?", (ccid_str,))
+            "SELECT PBoxId, PubKey, Salt FROM PBox WHERE UserCCId = ?", (ccid,))
         return d
 
     # listPBoxes(): Queries for all entries on PBox's basic meta-data attributes.
@@ -175,11 +181,11 @@ class SafeBoxStorage(object):
 
 
     # registerPBox(): Inserts a new entry on PBox table.
-    def registerPBox(self, request, pubkey, passwd_hash, salt):
-        ccid = str(request.args['ccid'])
-        ccid = strip_text(ccid)
-        name = str(request.args['name'])
-        name = strip_text(name)
+    def registerPBox(self, name, ccid, pubkey, passwd_hash, salt):
+        # ccid = str(request.args['ccid'])
+        # ccid = strip_text(ccid)
+        # name = str(request.args['name'])
+        # name = strip_text(name)
 
         # registerPBox_cb(): Callback for registerPBox(), #DEPRECATED#
         # produces reply according to registerPBox return value.
@@ -196,7 +202,7 @@ class SafeBoxStorage(object):
 
         d = self.dbpool.runQuery(
             "INSERT INTO PBox (UserCCId, UserCCKey, UserName, PubKey, Password, Salt) VALUES (?, ?, ?, ?, ?, ?) ",
-            (ccid, pubkey, name, pubkey, passwd_hash, salt));
+            (str(ccid), pubkey, str(name), pubkey, passwd_hash, salt));
             #d.addCallback(registerPBox_cb)
         return d
 
