@@ -4,13 +4,6 @@ from sfbx_client_utils import SafeBoxClient
 import sfbx_cc_utils as cc
 import sys, os, argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-pw', '--pwd', required=True, help="password to access the RSA Key in the system")
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument('-p', '--pin', help="pin to access the Citizen Card")
-group.add_argument('-c', '--ccid', help="the CC number, when no CC is given")
-args = parser.parse_args()
-
 class CommandReceiver(basic.LineReceiver):
     delimiter = "\n"
     control = 0
@@ -135,18 +128,16 @@ if __name__ == "__main__":
     pin = args.pin
 
     if pin is None:
-		uname = "Test Subject"
 		ccid = args.ccid
     else:
 		cert = cc.get_certificate(cc.CERT_LABEL, pin)
 		if cert is None:
 			sys.exit("PIN WRONG!")
 		user_data = cc.get_subjdata_from_cert(cert)
-		uname = user_data[0]
 		ccid = user_data[1]
 		ccid = ccid[2:]
 
-    print uname, ccid, pwd, pin
+    print ccid, pwd, pin
 
 	# dirname for the .pem files = user ccid
     if not os.path.exists(ccid):
@@ -155,5 +146,5 @@ if __name__ == "__main__":
     client =  SafeBoxClient()
     stdio.StandardIO(CommandReceiver())
 
-    reactor.callLater(0, client.startClient, ccid, pwd, "miguel", pin)
+    reactor.callLater(0, client.startClient, ccid, pwd, pin)
     reactor.run()

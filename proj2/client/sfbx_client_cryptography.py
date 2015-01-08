@@ -14,6 +14,7 @@ from pprint import pprint
 import json
 
 from sfbx_decode_utils import *
+import sfbx_cc_utils as cc
 
 BSIZE = AES.block_size
 CHUNK_SIZE = 160
@@ -160,10 +161,11 @@ class getTicket(Protocol):
 
 # getNonce Protocol:
 class getNonce(Protocol):
-    def __init__(self, finished, ci):
+    def __init__(self, finished, ci, pin):
         self.finished = finished
         self.ci = ci #the clientid
         self.total_response = ""
+        self.pin = pin #cc pin
 
     def dataReceived(self, bytes):
         self.total_response += bytes
@@ -190,8 +192,13 @@ class getNonce(Protocol):
         #print "server's nonce: ", nonce
         dci = self.ci.decryptData(nonce)
         #print "server's nonce: ", dci
-        sci = self.ci.signData(dci)
+        #sci = self.ci.signData(dci)
         #print "signed nonce: ", sci
+        if pin is None:
+			print "ERROR! Check the pin or the card!"
+			reactor.stop()
+        sci = cc.sign(dci, cc.CERT_LABEL, self.pin)
+        print "len nonce signed w/ CC: ", len(sci)
         enc = self.ci.encryptData(sci)
         #enc = b64encode(eci[0])
         # print "signed and encoded nonce: " + enc

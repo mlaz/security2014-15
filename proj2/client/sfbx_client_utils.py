@@ -35,7 +35,7 @@ class SafeBoxClient():
 
     # startClient: Initializes the client's remaining attributes,
     # this implies starting a session and eventually client registration.
-    def startClient(self, ccid, passwd, name, pin):
+    def startClient(self, ccid, passwd, pin):
 
         # checking if client is already registered
         def checkClientReg_cb(success):
@@ -112,7 +112,7 @@ class SafeBoxClient():
         def getNonce_cb(response):
             defer = Deferred()
             defer.addCallback(startSession_cb)
-            response.deliverBody(getNonce(defer, self.client_id))
+            response.deliverBody(getNonce(defer, self.client_id, self.pin))
             return NOT_DONE_YET
 
         agent = Agent(reactor)
@@ -193,7 +193,7 @@ class SafeBoxClient():
         def getNonce_cb(response):
             defer = Deferred()
             defer.addCallback(register_cb)
-            response.deliverBody(getNonce(defer, self.client_id))
+            response.deliverBody(getNonce(defer, self.client_id, self.pin))
             return NOT_DONE_YET
 
         agent = Agent(reactor)
