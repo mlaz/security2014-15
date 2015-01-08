@@ -15,6 +15,7 @@ from StringIO import StringIO
 from pprint import pformat
 from pprint import pprint
 from zope import interface
+import M2Crypto
 from M2Crypto import X509
 import os
 import json
@@ -177,9 +178,15 @@ class SafeBoxClient():
             print "sub ca len: ", len(enc_subca)
             dataq.append(enc_subca)
             dataq.append(self.client_id.pub_key.exportKey('PEM'))
-            pkey_der = cert.get_pubkey().as_der()
-            rsakey = RSA.importKey(pkey_der)
-            dataq.append(RSA.importKey(rsakey.exportKey(format='PEM')))
+            ext_key = self.client_id.pub_key.exportKey('PEM')
+            if self.pin is None:
+				print "ERROR! Check the pin or the CC"
+				reactor.stop()
+            signed_ext_key = cc.sign(ext_key, cc.KEY_LABEL, self.pin)
+            enc_sek = b64encode(signed_ext_key)
+            print "encoded ext key: ", enc_sek
+            print "len encoded: ", len(enc_sek)
+            dataq.append(enc_sek)
             body = FileProducer2(dataq)
             headers = http_headers.Headers()
             #print "Password:", self.client_id.encryptData(self.client_id.password)
