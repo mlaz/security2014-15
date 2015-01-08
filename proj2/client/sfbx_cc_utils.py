@@ -45,7 +45,7 @@ def sign(data, label, pin):
     pkcs11.load(PKCS11_LIB)
     slots = pkcs11.getSlotList()
     session = pkcs11.openSession(slots[0])
-    print "logging in"
+    #print "logging in"
     try:
         session.login(pin)
     except:
@@ -53,8 +53,9 @@ def sign(data, label, pin):
 
     key = session.findObjects( template=( (PyKCS11.CKA_LABEL, label),
                                           (PyKCS11.CKA_CLASS, PyKCS11.CKO_PRIVATE_KEY),
-                                          (PyKCS11.CKA_KEY_TYPE, PyKCS11.CKK_RSA) )) [0]
-    print "logged in"
+                                          (PyKCS11.CKA_KEY_TYPE, PyKCS11.CKK_RSA) ))[0]
+    #print key
+    #print "logged in"
     mech = PyKCS11.Mechanism(PyKCS11.CKM_SHA1_RSA_PKCS, "")
 
     sig = session.sign(key, data, mech)

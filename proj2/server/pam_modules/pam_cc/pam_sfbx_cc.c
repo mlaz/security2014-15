@@ -127,7 +127,7 @@ static int verify_signature(const char *user,
 
   // getting cckey
   //D(("PREPARING QUERY\n"));
-  D(("USER = %s\n", user));
+  //D(("USER = %s\n", user));
   res = sqlite3_prepare_v2(conn, query, strlen(query)+1, &stmt, &tail);
   if (res != SQLITE_OK)
     {
@@ -152,7 +152,7 @@ static int verify_signature(const char *user,
     {
       // Verifying signature
       char *key_pem = (char *) sqlite3_column_text(stmt, 0);
-      D(("KEY: %s\n", key_pem));
+      //D(("KEY: %s\n", key_pem));
 
       bufio = BIO_new_mem_buf(key_pem, -1);
 
@@ -214,6 +214,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
   if ((pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS)
     return (pam_err);
 
+  D(("Got User: %s", user));
   /* Setting up pam conversation function */
   pam_err = pam_get_item(pamh, PAM_CONV, &ptr);
 
@@ -243,7 +244,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
   if (pam_err != PAM_SUCCESS)
     return (PAM_AUTH_ERR);
 
-  D(("Got Challange: %s", original64));
+  //D(("Got Challange: %s", original64));
 
   /* Getting the signed data */
   msg1.msg_style = PAM_PROMPT_ECHO_OFF;
@@ -266,7 +267,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
   if (pam_err != PAM_SUCCESS)
     return (PAM_AUTH_ERR);
 
-  D(("Got Signature: %s", sign64));
+  //D(("Got Signature: %s", sign64));
 
   /* verify signature */
   if((pam_err = verify_signature(user, original64, sign64, argv[0])) != PAM_SUCCESS)

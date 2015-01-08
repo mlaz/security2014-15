@@ -12,7 +12,7 @@ from base64 import b64encode
 from sfbx_client_cryptography import *
 
 # CHANGE THIS BEFORE TESTING
-pin = None
+pin = "1827"
 if pin is None:
 	print "You forgot to change the pin to test!"
 	sys.exit(0)
@@ -81,7 +81,7 @@ salt = salt.encode("base64")
 #
 rsakey2 = rsakey.exportKey(format='PEM')
 pubkey = pubkey.exportKey(format='PEM')
-conn = sqlite3.connect('/media/sf_SECURITY/repo/proj2/server/safebox.sqlite')
+conn = sqlite3.connect('/media/sf_SECURITY/repo/security2014-p4g4/proj2/server/safebox.sqlite')
 conn.text_factory = str
 c = conn.cursor()
 

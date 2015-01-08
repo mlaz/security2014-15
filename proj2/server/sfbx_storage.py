@@ -186,7 +186,7 @@ class SafeBoxStorage(object):
         d = self.dbpool.runQuery(
             "INSERT INTO PBox (UserCCId, UserCCKey, UserName, PubKey, Password, Salt) VALUES (?, ?, ?, ?, ?, ?) ",
             (str(ccid), cckey, str(name), pubkey, passwd_hash, salt));
-       return d
+        return d
 
     # deletePBox(): Deletes an entry on PBox table.
     # Used when a client fails to start session opon registry.

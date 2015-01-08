@@ -6,7 +6,9 @@ from Crypto.PublicKey import RSA
 
 from sfbx_server_cryptography import ServerIdentity
 
+from base64 import *
 import pam
+import PAM
 
 NONCE_TIMEOUT = 3
 TICKET_TIMEOUT = 3
@@ -23,7 +25,7 @@ class TicketManager(object):
         if pboxid in self.active_tickets.keys():
             del self.active_tickets[pboxid]
 
-    #generateTicket: returns base64 encoded ticket
+    # generateTicket: returns base64 encoded ticket
     def generateTicket(self, pboxid, cli_key):
 
         if pboxid in self.active_tickets.keys():
@@ -42,7 +44,7 @@ class TicketManager(object):
             return self.server.encryptData(str(self.active_tickets[pboxid]['ticket']) , cli_key)
         else: return self.generateTicket(pboxid, cli_key)
 
-    #validateTicket: ticket must be base64 encoded
+    # validateTicket: ticket must be base64 encoded
     def validateTicket(self,signature, pboxid, cli_key):
         original = ""
         if pboxid in self.active_tickets.keys():
@@ -84,7 +86,7 @@ class SessionManager(object):
         if pboxid in self.active_sessions.keys():
             self.killSession(pboxid)
 
-        if self.authm.validateNonce (signature, nonceid, cli_key):
+        if self.authm.validateNonce (signature, nonceid, pboxid):
             timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession, pboxid)
             self.active_sessions.update({pboxid : timeout})
             return True
@@ -124,7 +126,7 @@ class AuthManager(object):
         self.server = identity
         self.active_nonces = {}
 
-    #generateNonce: returns base64 encoded nonce
+    # generateNonce: returns base64 encoded nonce
     def generateNonce(self, cli_key):
         def removeNonce_cb(nonceid):
             del self.active_nonces[nonceid]
@@ -141,8 +143,10 @@ class AuthManager(object):
         self.active_nonces.update({nonceid: {'nonce': nonce,  'timeout': timeout}})
         return (enc_nonce, nonceid)
 
-    #validateNonce: nonce must be base64 encoded //TODO: use PAM here.
-    def validateNonce(self, signature, nonceid, cli_key):
+    # validateNonce: validates the signed nonce using PAM
+    def validateNonce(self, signature, nonceid, pboxid):
+        ret = False
+
         original = ""
         if nonceid in self.active_nonces.keys():
             self.active_nonces[nonceid]['timeout'].cancel()
@@ -151,8 +155,43 @@ class AuthManager(object):
         else:
             return False
 
-        cli_key = RSA.importKey(cli_key)
-        print original
-        print signature
-        signature = self.server.decryptData(signature)#TEST THIS!
-        return self.server.verifySignature(signature, original, cli_key)
+        signature = self.server.decryptData(signature)
+        # print 'Original before: ', original
+        # print 'Signature before: ', signature
+
+        # PAM conversation
+        def pam_conv(auth, query_list, userData):
+            resp = []
+
+            for i in range(len(query_list)):
+                query, type = query_list[i]
+                #print query
+                print "ORIGINAL: ", b64encode(original)
+                if query == 'Original:':
+                        resp.append((b64encode(original), 0))
+                elif query == 'Signature:':
+                        resp.append((b64encode(signature), 0))
+                else:
+                        resp.append(('', 0))
+            return resp
+
+        auth = PAM.pam()
+        auth.start('myservice')
+        auth.set_item(PAM.PAM_USER, str(pboxid))
+        auth.set_item(PAM.PAM_CONV, pam_conv)
+        try:
+            auth.authenticate()
+        except PAM.error, resp:
+            print 'AUTH FAIL (%s)' % resp
+        except:
+            print 'PAM module error'
+        else:
+            ret = True
+
+        return ret
+
+        # cli_key = RSA.importKey(cli_key)
+        # print original
+        # print signature
+        # signature = self.server.decryptData(signature)#TEST THIS!
+        # return self.server.verifySignature(signature, original, cli_key)
