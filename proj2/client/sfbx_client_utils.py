@@ -153,26 +153,26 @@ class SafeBoxClient():
             dataq.append(signedNonce)
             dataq.append(self.client_id.encryptData(self.client_id.password))
             # Sending the Certificate and the Sub CA to the server
-            if self.pin is not None:
-                cert = cc.get_certificate(cc.CERT_LABEL, self.pin)
-                #print type(cert.as_pem())
-                #print cert.as_pem()
-                if cert is None:
-                    print "ERROR! Check the pin"
-                    reactor.stop()
-                subca = cc.get_certificate(cc.SUBCA_LABEL, self.pin)
-                #print type(subca.as_pem())
-                #print subca.as_pem()
-                if subca is None:
-                    print "ERROR! Check the pin"
-                    reactor.stop()
-                print "cert len: ", len(self.client_id.encryptData(cert.as_pem()))
-                print "sub ca len: ", len(self.client_id.encryptData(subca.as_pem()))
-                dataq.append(self.client_id.encryptData(cert.as_pem()))
-                dataq.append(self.client_id.encryptData(subca.as_pem()))
-            else:
+            if self.pin is  None:
                 print "ERROR! Check the pin!"
                 reactor.stop()
+            cert = cc.get_certificate(cc.CERT_LABEL, self.pin)
+            #print type(cert.as_pem())
+            #print cert.as_pem()
+            if cert is None:
+                print "ERROR! Check the pin"
+                reactor.stop()
+            subca = cc.get_certificate(cc.SUBCA_LABEL, self.pin)
+            #print type(subca.as_pem())
+            #print subca.as_pem()
+            if subca is None:
+                print "ERROR! Check the pin"
+                reactor.stop()
+            print "cert len: ", len(self.client_id.encryptData(cert.as_pem()))
+            print "sub ca len: ", len(self.client_id.encryptData(subca.as_pem()))
+            dataq.append(self.client_id.encryptData(cert.as_pem()))
+            dataq.append(self.client_id.encryptData(subca.as_pem()))
+                
             body = _FileProducer(StringIO(self.client_id.pub_key.exportKey('PEM')) ,dataq)
             headers = http_headers.Headers()
             #print "Password:", self.client_id.encryptData(self.client_id.password)
