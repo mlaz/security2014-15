@@ -15,6 +15,7 @@ from StringIO import StringIO
 from pprint import pformat
 from pprint import pprint
 from zope import interface
+from M2Crypto import X509
 import os
 import json
 import Cookie
@@ -22,12 +23,13 @@ import Cookie
 from sfbx_client_cryptography import *
 from sfbx_client_protocols import *
 from sfbx_fs_utils import _FileProducer
+import sfbx_cc_utils as cc
 
 # SafeBoxClient():
 class SafeBoxClient():
     def __init__(self, server_addr="localhost:8000"):
         self.server_addr = server_addr
-        self.client_id = self.ccid = self.ccid = None
+        self.client_id = self.ccid = self.pin = None
         self.cookie_jar = CookieJar()
         self.curr_ticket = ""
 
@@ -39,12 +41,12 @@ class SafeBoxClient():
         def checkClientReg_cb(success):
             if success == False:
                 print "User not registered."
-                if name is "":#TODO replace this with fetching user data from CC
-                    print "Please provide your name for registry."
+                if pin is None:
+                    print "Please provide your Citizen Card for registration"
                     reactor.stop()
                 else:
                     print "Registering user..."
-                    return self.handleRegister(name)
+                    return self.handleRegister()
             #pprint(self.cookie_jar.__dict__)
             for cookie in self.cookie_jar:
                 #print cookie
@@ -57,6 +59,8 @@ class SafeBoxClient():
             self.handleStartSession(checkClientReg_cb)
 
         self.ccid = ccid
+        if pin is not None:
+			self.pin = pin
         return self.handleGetKey(startClientId_cb)
 
 # Session, Registry and Authentication related opreations
@@ -125,7 +129,7 @@ class SafeBoxClient():
         return NOT_DONE_YET
 
     # handleRegister: Handles the registration process. Also part of the startClient operation.
-    def handleRegister(self, name):
+    def handleRegister(self):
         def checkClientReg_cb(success):
             if success == False:
                 print "ERROR: Couldn't register user."
@@ -143,21 +147,37 @@ class SafeBoxClient():
             response.deliverBody(DataPrinter(defer, "bool"))
             return NOT_DONE_YET
 
-
         def register_cb((signedNonce, nonceid)):
             agent = CookieAgent(Agent(reactor), self.cookie_jar)
             dataq = []
             dataq.append(signedNonce)
             dataq.append(self.client_id.encryptData(self.client_id.password))
+            # Sending the Certificate and the Sub CA to the server
+            if self.pin is not None:
+                cert = cc.get_certificate(cc.CERT_LABEL, self.pin)
+                print type(cert.as_pem())
+                print cert.as_pem()
+                if cert is None:
+                    print "ERROR! Check the pin"
+                    reactor.stop()
+                subca = cc.get_certificate(cc.SUBCA_LABEL, self.pin)
+                print type(subca.as_pem())
+                print subca.as_pem()
+                if subca is None:
+                    print "ERROR! Check the pin"
+                    reactor.stop()
+                    dataq.append(self.client_id.encryptData(cert.as_pem()))
+                    dataq.append(self.client_id.encryptData(subca.as_pem()))
+            else:
+                print "ERROR! Check the pin!"
+                reactor.stop()
             body = _FileProducer(StringIO(self.client_id.pub_key.exportKey('PEM')) ,dataq)
             headers = http_headers.Headers()
             #print "Password:", self.client_id.encryptData(self.client_id.password)
             #print "LEN:", len(self.client_id.encryptData(self.client_id.password))
             d = agent.request(
                 'PUT',
-                'http://localhost:8000/pboxes/?method=register&ccid='
-                + self.ccid
-                + '&name=' + name
+                'http://localhost:8000/pboxes/?method=register'
                 + '&nonceid=' + str(nonceid),
                 headers,
                 body)
