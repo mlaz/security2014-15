@@ -195,8 +195,8 @@ class SafeBoxStorage(object):
 
 
         d = self.dbpool.runQuery(
-            "INSERT INTO PBox (UserCCId, UserName, PubKey, Password, Salt) VALUES (?, ?, ?, ?, ?) ",
-            (ccid, name, pubkey, passwd_hash, salt));
+            "INSERT INTO PBox (UserCCId, UserCCKey, UserName, PubKey, Password, Salt) VALUES (?, ?, ?, ?, ?, ?) ",
+            (ccid, pubkey, name, pubkey, passwd_hash, salt));
             #d.addCallback(registerPBox_cb)
         return d
 

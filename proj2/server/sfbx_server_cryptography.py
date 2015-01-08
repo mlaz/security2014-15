@@ -57,7 +57,8 @@ class ServerIdentity(object):
     def genHash(self, passwd, salt=None):
         if not salt:
             salt = Random.get_random_bytes(SHA256.digest_size)
-        print salt
+            print "generated salt: ", salt
+        print "hashing passwd: ", passwd
         hash = HMAC.new(salt, digestmod=SHA256)
         hash.update(str(passwd))
         return (b64encode(hash.hexdigest()), self.encryptData(salt))

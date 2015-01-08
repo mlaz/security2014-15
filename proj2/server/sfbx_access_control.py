@@ -61,7 +61,7 @@ class AccessCtrlHandler(object):
         return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
 
     # handleStartSession: handles start session requests.
-    def handleStartSession(self, request, nonce=None):
+    def handleStartSession(self, request, nonce=None, passwd=None):
         nonceid = strip_text(str(request.args['nonceid']))
         nonceid = int(nonceid)
         if nonceid > -1:
@@ -73,9 +73,11 @@ class AccessCtrlHandler(object):
                                           'message': "No challange nonce on request body."} }
                 return json.dumps(reply_dict, encoding="utf-8")
         else:
-            nonce = Null
+            nonce = None
 
-        passwd = request.content.read(USR_PASSWD_SIZE)
+        if passwd == None:
+            passwd = request.content.read(USR_PASSWD_SIZE)
+        
 
         def handleStartSession_cb(data):
             if not data:
@@ -87,7 +89,7 @@ class AccessCtrlHandler(object):
                 pubkey = data[0][1]
                 salt = self.server.decryptData(data[0][2]) #TODO: STORE THIS ENCRYPTED
                 #print pubkey
-                print salt
+                print "StartSession salt:" , salt
                 #print "encripted nonce: ", nonce
                 if self.session_manager.startSession(nonce, nonceid, pubkey, pboxid, salt, passwd):
                     print "Valid Nonce!"
@@ -162,17 +164,17 @@ class AccessCtrlHandler(object):
 
     # handleRegisterPBox: Checks if client exists, if so returns error, else registers the client.
     def handleRegisterPBox(self, request):
-        def handleGetSession(data, request, nonce):
+        def handleGetSession(data, request, nonce, passwd):
             if len(data) != 0:
                 reply_dict = { 'status': {'error': "Unsuccessful db transaction", 'message': "N/A"} }
                 request.write(json.dumps(reply_dict, encoding="utf-8"));
                 request.finish()
             else:
-                return self.handleStartSession(request, nonce)
+                return self.handleStartSession(request, nonce, passwd)
 
 
         # Checking if the client exists.
-        def checkClientExists_cb(data, nonce, key_txt, passwd_hash, salt):
+        def checkClientExists_cb(data, nonce, key_txt, passwd_hash, salt, passwd):
             if data:
                 reply_dict = { 'status': {'error': "Invalid Request",
                                           'message': 'User already exists.'} }
@@ -181,7 +183,7 @@ class AccessCtrlHandler(object):
             else:
                 #TODO: validate certificates and keys here
                 d = self.storage.registerPBox(request, key_txt, passwd_hash, salt)
-                d.addCallback(handleGetSession, request, nonce)
+                d.addCallback(handleGetSession, request, nonce, passwd)
                 return NOT_DONE_YET
 
         #TODO: integrate this with content integrity validation
@@ -192,15 +194,17 @@ class AccessCtrlHandler(object):
             return json.dumps(reply_dict, encoding="utf-8")
 
         # Hashing password:
-        passwd = request.content.read(CLI_PASSWD_SIZE)
-        print "Password:", passwd
-        print type(passwd), "LEN:",len(passwd)
-        cli_passwd = self.server.decryptData(passwd)
+        cry_passwd = request.content.read(USR_PASSWD_SIZE)
+        print "Password:", cry_passwd
+        #print type(passwd), "LEN:",len(passwd)
+        cli_passwd = self.server.decryptData(cry_passwd)
         if not cli_passwd:
             reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "Invalid format for password on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
         (passwd_hash, salt) = self.server.genHash(cli_passwd)
+        
+        print "Register Salt:", salt
 
         # Validating key:
         key_txt = request.content.read(RSA_KEY_SIZE)
@@ -216,7 +220,7 @@ class AccessCtrlHandler(object):
             return json.dumps(reply_dict, encoding="utf-8")
 
         d = self.storage.getClientData(request)
-        d.addCallback(checkClientExists_cb, nonce, key_txt, passwd_hash, salt)
+        d.addCallback(checkClientExists_cb, nonce, key_txt, passwd_hash, salt, cry_passwd)
 
         return NOT_DONE_YET
 

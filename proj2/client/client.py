@@ -121,14 +121,22 @@ class CommandReceiver(basic.LineReceiver):
             self.transport.write("Bye Bye!")
         else:
             self.transport.write("Error: no such command.\n")
-	
-def main(args):
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-pw', '--pwd', required=True, help="password to access the RSA Key in the system")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-p', '--pin', help="pin to access the Citizen Card")
+    group.add_argument('-c', '--ccid', help="the CC number, when no CC is given")
+    args = parser.parse_args()
+
     pwd = args.pwd
     pin = args.pin
-    
+
     if pin is None:
 		uname = "Test Subject"
-		ccid = args.ccid	
+		ccid = args.ccid
     else:
 		cert = cc.get_certificate(cc.CERT_LABEL, pin)
 		if cert is None:
@@ -137,7 +145,7 @@ def main(args):
 		uname = user_data[0]
 		ccid = user_data[1]
 		ccid = ccid[2:]
-    
+
     print uname, ccid, pwd, pin
 
 	# dirname for the .pem files = user ccid
@@ -147,8 +155,5 @@ def main(args):
     client =  SafeBoxClient()
     stdio.StandardIO(CommandReceiver())
 
-    reactor.callLater(0, client.startClient, ccid, pwd, uname, pin)
+    reactor.callLater(0, client.startClient, ccid, pwd, "miguel", pin)
     reactor.run()
-
-if __name__ == "__main__":
-	main(args)

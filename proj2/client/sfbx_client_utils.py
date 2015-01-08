@@ -33,7 +33,7 @@ class SafeBoxClient():
 
     # startClient: Initializes the client's remaining attributes,
     # this implies starting a session and eventually client registration.
-    def startClient(self, ccid, passwd, name):
+    def startClient(self, ccid, passwd, name, pin):
 
         # checking if client is already registered
         def checkClientReg_cb(success):
