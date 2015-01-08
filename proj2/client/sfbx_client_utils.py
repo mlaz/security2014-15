@@ -168,16 +168,18 @@ class SafeBoxClient():
             if subca is None:
                 print "ERROR! Check the pin"
                 reactor.stop()
-#            print "cert len: ", len(self.client_id.encryptData(cert.as_pem()))
- #           print "sub ca len: ", len(self.client_id.encryptData(subca.as_pem()))
+			#print "cert len: ", len(self.client_id.encryptData(cert.as_pem()))
+			#print "sub ca len: ", len(self.client_id.encryptData(subca.as_pem()))
             enc_cert = b64encode(cert.as_pem())
             print "cert len: ", len(enc_cert)
             dataq.append(enc_cert)
-
             enc_subca = b64encode(subca.as_pem())
             print "sub ca len: ", len(enc_subca)
             dataq.append(enc_subca)
             dataq.append(self.client_id.pub_key.exportKey('PEM'))
+            pkey_der = cert.get_pubkey().as_der()
+            rsakey = RSA.importKey(pkey_der)
+            dataq.append(RSA.importKey(rsakey.exportKey(format='PEM')))
             body = FileProducer2(dataq)
             headers = http_headers.Headers()
             #print "Password:", self.client_id.encryptData(self.client_id.password)
