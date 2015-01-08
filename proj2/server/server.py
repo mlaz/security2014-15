@@ -67,28 +67,6 @@ class Session(Resource):
                      'message': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        # # register:
-        # if request.args['method'] == ['register']:
-        #     print request.args['method']
-        #     # if 'ccid' not in request.args.keys():
-        #     #     error = { 'status': {'error': "Invalid Request",
-        #     #              'message': "Argument 'ccid' not specified."} }
-
-        #     # if ('name' not in request.args.keys()) & (error == None):
-        #     #     error = { 'status': {'error': "Invalid Request",
-        #     #              'message': "Argument 'name' not specified."} }
-
-        #     if ('nonceid' not in request.args.keys()) & (error == None):
-        #         error = { 'status': {'error': "Invalid Request",
-        #                  'message': "Argument 'nonceid' not specified."} }
-
-        #     # if ('password' not in request.args.keys()) & (error == None):
-        #     #     error = { 'status': {'error': "Invalid Request",
-        #     #              'message': "Argument 'password' not specified."} }
-
-        #     elif (error == None):
-        #         return handler.handleRegisterPBox(request);
-
         # startsession:
         if request.args['method'] == ['startsession']:
             print request.args['method']
@@ -137,7 +115,7 @@ class Session(Resource):
             print request.args['method']
             if error is None:
                 return handler.handleDeleteFile(request)
-
+ 
         error = { 'status': {'error': "Invalid Request",
                     'message': "Unknown method for this resource."} }
         pprint(request.__dict__)

@@ -181,30 +181,12 @@ class SafeBoxStorage(object):
 
 
     # registerPBox(): Inserts a new entry on PBox table.
-    def registerPBox(self, name, ccid, pubkey, passwd_hash, salt):
-        # ccid = str(request.args['ccid'])
-        # ccid = strip_text(ccid)
-        # name = str(request.args['name'])
-        # name = strip_text(name)
-
-        # registerPBox_cb(): Callback for registerPBox(), #DEPRECATED#
-        # produces reply according to registerPBox return value.
-        # def registerPBox_cb (data, method):
-        #     if len(data) == 0:
-        #         reply_dict = {'status': "OK"}
-
-        #     else:
-        #         reply_dict = { 'status': {'error': "Unsuccessful db transaction", 'message': "N/A"} }
-        #         request.write(json.dumps(reply_dict, encoding="utf-8"));
-
-        #     request.finish()
-
+    def registerPBox(self, name, ccid, pubkey, cckey, passwd_hash, salt):
 
         d = self.dbpool.runQuery(
             "INSERT INTO PBox (UserCCId, UserCCKey, UserName, PubKey, Password, Salt) VALUES (?, ?, ?, ?, ?, ?) ",
-            (str(ccid), pubkey, str(name), pubkey, passwd_hash, salt));
-            #d.addCallback(registerPBox_cb)
-        return d
+            (str(ccid), cckey, str(name), pubkey, passwd_hash, salt));
+       return d
 
     # deletePBox(): Deletes an entry on PBox table.
     # Used when a client fails to start session opon registry.

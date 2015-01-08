@@ -10,7 +10,7 @@ import json
 from sfbx_server_cryptography import ServerIdentity
 from sfbx_authentication import TicketManager, SessionManager
 from sfbx_storage import SafeBoxStorage, strip_text
-from sfbx_cc_utils import get_subjdata_from_cert_str, validate_cert
+from sfbx_cc_utils import get_subjdata_from_cert_str, validate_cert, get_cckey
 NONCE_SIZE = 172 # size of signed nonce
 USR_PASSWD_SIZE = 172
 USR_CERT_SIZE = 3380
@@ -183,7 +183,7 @@ class AccessCtrlHandler(object):
                 request.finish()
             else:
                 #TODO: validate certificates and keys here
-                d = self.storage.registerPBox(name, ccid, key_txt, passwd_hash, salt)
+                d = self.storage.registerPBox(name, ccid, key_txt, cli_cc_key, passwd_hash, salt)
                 d.addCallback(handleGetSession, request, nonce, passwd)
                 return NOT_DONE_YET
 
@@ -232,6 +232,9 @@ class AccessCtrlHandler(object):
                                       'message': "Invalid CC subca on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
         print "Certificate Valid"
+
+        # Extracting CC public Key
+        cli_cc_key = get_cckey(cli_cert)
 
         # Validating key:
         key_txt = request.content.read(RSA_KEY_SIZE)
