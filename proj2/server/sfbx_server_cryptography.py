@@ -63,3 +63,10 @@ class ServerIdentity(object):
         hash.update(str(passwd))
         return (b64encode(hash.hexdigest()), self.encryptData(salt))
 
+    # Concatenates and hashes a string list with given salt, then compares with given hash
+    def validateArgs(self, salt, args, hashed):
+        #print "salt", salt
+        args = sorted(args)
+        args_str = "".join(args)
+        h1 = self.genHash(args_str, salt)
+        return h1[0] == hashed

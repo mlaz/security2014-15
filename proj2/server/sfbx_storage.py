@@ -286,7 +286,7 @@ class SafeBoxStorage(object):
 
             request.write(str(data[0][4]))
             iv_plain = self.sid.decryptData(data[0][3])
-            print iv_plain
+            #print iv_plain
             iv = self.sid.encryptData(iv_plain, pubkey)
             request.write(iv)
             file = open(file_path ,"r")
@@ -537,7 +537,7 @@ class SafeBoxStorage(object):
 
             request.write(str(data[0][1])) # writing key
             iv_plain = self.sid.decryptData(data[0][2]) # writing IV
-            print iv_plain
+            #print iv_plain
             iv = self.sid.encryptData(iv_plain, pubkey)
             request.write(iv)
             file = open(file_path ,"r")

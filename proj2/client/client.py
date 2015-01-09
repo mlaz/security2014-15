@@ -37,8 +37,6 @@ class CommandReceiver(basic.LineReceiver):
 
         elif method == "get":
             if len(s) == 3:
-                if s[1].lower() == "file":
-                    return client.handleGetFile(s)
                 if s[1].lower() == "pboxinfo":
                     return client.handleGetInfo(s)
                 elif s[1].lower() == "fileinfo":
@@ -48,20 +46,11 @@ class CommandReceiver(basic.LineReceiver):
                 else:
                     print "Error: invalid arguments!\n"
                     print "Correct usage: get fileinfo <fileId> or get pboxinfo <PBox Owners CC Number>"
-            elif len(s) == 4:
+            if len(s) == 4:
                 if s[1].lower() == "file":
-                    fileId = s[2]
                     return client.handleGetFile(s)
-
                 if s[1].lower() == "shared":
-                    fileId = s[2]
                     return client.handleGetShared(s)
-
-                else:
-                    print "Error: invalid arguments!\n"
-                    print "Correct usage: get file|shared <fileId> <dest. filename on filesystem.>"
-            else:
-                print "Error: invalid arguments!\n"
 
         elif method == "put":
             if len(s) != 3:

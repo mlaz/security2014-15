@@ -39,6 +39,12 @@ class TicketManager(object):
         self.active_tickets.update({pboxid: {'ticket': ticket}})
         return enc_ticket
 
+    def getTicketRaw(self, pboxid):
+        if pboxid in self.active_tickets.keys():
+            return self.active_tickets[pboxid]['ticket']
+        else:
+            return None
+
     def getTicket(self, pboxid, cli_key):
         if pboxid in self.active_tickets.keys():
             return self.server.encryptData(str(self.active_tickets[pboxid]['ticket']) , cli_key)
@@ -140,7 +146,6 @@ class SessionManager(object):
             print "(SessionManager:KillSession) Session not found for pboxid: ", pboxid
 
     def refreshSession(self, pboxid):
-        #pprint(self.active_sessions.keys())
         if pboxid in self.active_sessions.keys():
             if not self.active_sessions[pboxid].called:
                 self.active_sessions[pboxid].cancel()

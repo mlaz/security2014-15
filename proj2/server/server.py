@@ -439,7 +439,7 @@ class Shares(Resource):
                      'message': "Argument 'method' not specified."} }
             return json.dumps(error, sort_keys=True, encoding="utf-8")
 
-        pprint(request.__dict__)
+        #pprint(request.__dict__)
 
         # get_mdata:
         if request.args['method'] == ['get_mdata']:

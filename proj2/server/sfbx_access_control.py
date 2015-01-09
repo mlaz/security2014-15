@@ -17,7 +17,7 @@ KEY_SIG_SIZE = 172
 USR_CERT_SIZE = 3380
 USR_SUBCA_SIZE = 3328
 RSA_KEY_SIZE = 271
-
+HASH_SIZE = 88
 #
 # SafeBox server access control utilities API:
 # Provides facilities and utilities for preforming access control operations
@@ -39,7 +39,7 @@ class AccessCtrlHandler(object):
 
     def handleGetKey(self):
         key = self.server.pub_key.exportKey('PEM')
-        print key
+        #print key
         reply_dict = { 'status': "OK", 'key': key }
         return json.dumps(reply_dict, sort_keys=True, encoding="utf-8")
 
@@ -141,6 +141,26 @@ class AccessCtrlHandler(object):
                 if self.ticket_manager.validateTicket(ticket, pboxid, pubkey):
                     print "Valid Ticket!"
                     self.session_manager.refreshSession(int(pboxid))
+                    #Validatind argumen Integrity:
+                    hashed = request.content.read(HASH_SIZE)
+                    #print hashed
+                    if not hash:
+                        reply_dict = { 'status': {'error': "Invalid Request",
+                        'message': "No argument data  hash on request body."} }
+                        return json.dumps(reply_dict, encoding="utf-8")
+
+                    list = []
+                    for k in request.args.keys():
+                        list.append(strip_text(str(request.args[k])))
+                    if self.server.validateArgs(self.ticket_manager.getTicketRaw(pboxid), list, hashed) == True:
+                        print "Args Validated"
+                    else:
+                        print "Args Corrupted"
+                        reply_dict = { 'status': {'error': "Invalid Request",
+                        'message': "No argument data  hash on request body."} }
+                        return json.dumps(reply_dict, encoding="utf-8")
+
+
                     d = method(request, pboxid, pubkey)
                     return NOT_DONE_YET
 

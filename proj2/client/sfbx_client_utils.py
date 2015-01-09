@@ -159,6 +159,7 @@ class SafeBoxClient():
                 #print type(cookie)
                 self.curr_ticket = self.client_id.decryptData(cookie.value)
             print "Registration Successful."
+            print "User: ", self.ccid," logged in."
         def procResponse_cb(response, method):
             defer = Deferred()
             defer.addCallback(method)
@@ -244,6 +245,7 @@ class SafeBoxClient():
             cookie.path = uri
             self.cookie_jar.clear()
             self.cookie_jar.set_cookie(cookie)
+        return dci
         #print cookie
 
 # List Operations
@@ -255,7 +257,10 @@ class SafeBoxClient():
         return NOT_DONE_YET
 
     def handleListPboxes(self):
-        self.processCookie("/pboxes")
+        args = ("list", str(self.ccid))
+        salt = self.processCookie("/pboxes")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+        #print "hashed:", self.client_id.genHashArgs(args, salt)
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
@@ -263,12 +268,15 @@ class SafeBoxClient():
             'http://localhost:8000/pboxes/?method=list&ccid='
             + self.ccid,
             headers,
-            None)
+            body)
         d.addCallback(self.handleList_cb)
         return NOT_DONE_YET
 
     def handleListFiles(self):
-        self.processCookie("/files")
+        args = ("list", str(self.ccid))
+        salt = self.processCookie("/files")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
@@ -276,12 +284,15 @@ class SafeBoxClient():
             'http://localhost:8000/files/?method=list&ccid='
             + self.ccid,
             headers,
-            None)
+            body)
         d.addCallback(self.handleList_cb)
         return NOT_DONE_YET
 
     def handleListShares(self):
-        self.processCookie("/shares")
+        args = ("list", str(self.ccid))
+        salt = self.processCookie("/shares")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
@@ -289,7 +300,7 @@ class SafeBoxClient():
             'http://localhost:8000/shares/?method=list&ccid='
             + self.ccid,
             headers,
-            None)
+            body)
         d.addCallback(self.handleList_cb)
         return NOT_DONE_YET
 
@@ -305,8 +316,10 @@ class SafeBoxClient():
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
+        args = ("get_mdata", str(self.ccid), data[1])
+        salt = self.processCookie("/pboxes")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
 
-        self.processCookie("/pboxes")
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
@@ -314,7 +327,7 @@ class SafeBoxClient():
             'http://localhost:8000/pboxes/?method=get_mdata&ccid='
             + self.ccid + "&tgtccid=" + data[1],
             headers,
-            None)
+            body)
 
         d.addCallback(handleGetMData_cb)
 
@@ -329,7 +342,10 @@ class SafeBoxClient():
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
-        self.processCookie("/files")
+        args = ("get_mdata", str(self.ccid), data[1])
+        salt = self.processCookie("/files")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
@@ -337,7 +353,7 @@ class SafeBoxClient():
             'http://localhost:8000/files/?method=get_mdata&ccid='
             + self.ccid + "&fileid=" + data[1],
             headers,
-            None)
+            body)
 
         d.addCallback(handleGetFileMData_cb)
 
@@ -352,7 +368,10 @@ class SafeBoxClient():
             response.deliverBody(DataPrinter(defer, "getmdata"))
             return NOT_DONE_YET
 
-        self.processCookie("/shares")
+        args = ("get_mdata", str(self.ccid), data[1])
+        salt = self.processCookie("/shares")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
@@ -360,7 +379,7 @@ class SafeBoxClient():
             'http://localhost:8000/shares/?method=get_mdata&ccid='
             + self.ccid + "&fileid=" + data[1],
             headers,
-            None)
+            body)
 
         d.addCallback(handleGetShareMData_cb)
 
@@ -413,15 +432,18 @@ class SafeBoxClient():
             return finished
 
         fileId = s[2]
-        self.processCookie("/files")
+        args = ("getfile", str(self.ccid), str(fileId))
+        salt = self.processCookie("/files")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
             'GET',
             'http://localhost:8000/files/?method=getfile&ccid=' + self.ccid
-            + '&fileid=' + fileId,
+            + '&fileid=' + str(fileId),
             headers,
-            None)
+            body)
         f = open(fileId, "w")
         d.addCallback(handleGetFile_cb, f)
         return NOT_DONE_YET
@@ -437,7 +459,10 @@ class SafeBoxClient():
             return finished
 
         fileId = s[2]
-        self.processCookie("/shares")
+        args = ("getshared", str(self.ccid), str(fileId))
+        salt = self.processCookie("/shares")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
@@ -445,7 +470,7 @@ class SafeBoxClient():
             'http://localhost:8000/shares/?method=getshared&ccid=' + self.ccid
             + '&fileid=' + fileId,
             headers,
-            None)
+            body)
         f = open(fileId, "w")
         d.addCallback(handleGetShared_cb, f)
         return NOT_DONE_YET
@@ -466,11 +491,15 @@ class SafeBoxClient():
         file = open(s[2], 'r')
         enc_file = open("enc_fileout", 'w')
         crd = self.client_id.encryptFileSym(file, enc_file)
-        self.processCookie("/files")
-        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+
+        args = ("putfile", str(self.ccid), os.path.basename(s[2]))
+        salt = self.processCookie("/files")
+
         dataq = []
+        dataq.append( self.client_id.genHashArgs(args, salt))
         dataq.append( self.client_id.encryptData(crd[0], self.client_id.pub_key))
         dataq.append( self.client_id.encryptData(crd[1]) )
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
         #print crd[1]
         # print "debugging:key, iv putfile"
         # print dataq[1]
@@ -500,14 +529,18 @@ class SafeBoxClient():
             def updateFile_cb(iv):
                 #data = (key,)
                 print "Updating file..."
-                self.processCookie("/files")
-                agent = CookieAgent(Agent(reactor), self.cookie_jar)
+
+                args = ("updatefile", str(self.ccid), os.path.basename(s[3]), s[2])
+                salt = self.processCookie("/files")
+
                 dataq = []
+                dataq.append( self.client_id.genHashArgs(args, salt))
                 dataq.append( iv )
                 # print "debugging:ticket, iv updatefile"
                 # print dataq[0]
                 # print dataq[1]
                 # print len(dataq[1])
+                agent = CookieAgent(Agent(reactor), self.cookie_jar)
                 print "Uploading file..."
                 enc_file = open("enc_fileout", 'r')
                 body = _FileProducer(enc_file ,dataq)
@@ -524,15 +557,19 @@ class SafeBoxClient():
 
             def updateShared_cb(iv):
                 print "Updating file..."
-                self.processCookie("/shares")
-                agent = CookieAgent(Agent(reactor), self.cookie_jar)
+
+                args = ("updateshared", str(self.ccid), os.path.basename(s[3]), s[2])
+                salt = self.processCookie("/shares")
+
                 dataq = []
+                dataq.append( self.client_id.genHashArgs(args, salt))
                 dataq.append( iv )
                 # print "debugging:ticket, iv updatefile"
                 # print dataq[0]
                 # print dataq[1]
                 # print len(dataq[1])
                 print "Uploading file..."
+                agent = CookieAgent(Agent(reactor), self.cookie_jar)
                 enc_file = open("enc_fileout", 'r')
                 body = _FileProducer(enc_file ,dataq)
                 headers = http_headers.Headers()
@@ -570,7 +607,10 @@ class SafeBoxClient():
         return self.handleGetShareMData(hsmd_data)
 
     def handleUpdateSharePerm(self, s):
-        self.processCookie("/shares")
+        args = ("updateshareperm", str(self.ccid), s[3], s[2], s[4])
+        salt = self.processCookie("/shares")
+        body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
         agent = CookieAgent(Agent(reactor), self.cookie_jar)
         headers = http_headers.Headers()
         d = agent.request(
@@ -578,7 +618,7 @@ class SafeBoxClient():
             'http://localhost:8000/shares/?method=updateshareperm&ccid='
             + self.ccid + "&rccid=" + s[3] + "&fileid=" + s[2] + "&writeable=" + s[4] ,
             headers,
-            None)
+            body)
         d.addCallback(self.printPutReply_cb)
 
         return NOT_DONE_YET
@@ -591,10 +631,13 @@ class SafeBoxClient():
             if not data:
                 print "Done."
             else:
-                pprint(data)
+                print "Done."
 
         def deleteFile_cb():
-            self.processCookie("/files")
+            args = ("delete", str(self.ccid), s[2])
+            salt = self.processCookie("/files")
+            body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
             agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
             d = agent.request(
@@ -602,12 +645,15 @@ class SafeBoxClient():
                 'http://localhost:8000/files/?method=delete&ccid='
                 + self.ccid + "&fileid=" + s[2],
                 headers,
-                None)
+                body)
 
             d.addCallback(printDeleteReply_cb)
 
         def deleteShare_cb():
-            self.processCookie("/shares")
+            args = ("delete", str(self.ccid), s[2], s[3])
+            salt = self.processCookie("/shares")
+            body = FileBodyProducer(StringIO(self.client_id.genHashArgs(args, salt)))
+
             agent = CookieAgent(Agent(reactor), self.cookie_jar)
             headers = http_headers.Headers()
             d = agent.request(
@@ -615,7 +661,7 @@ class SafeBoxClient():
                 'http://localhost:8000/shares/?method=delete&ccid='
                 + self.ccid + "&fileid=" + s[2] + "&rccid=" + s[3],
                 headers,
-                None)
+                body)
 
             d.addCallback(printDeleteReply_cb)
 
@@ -642,11 +688,15 @@ class SafeBoxClient():
                 print "pubkey" + dstkey
 
                 def shareFile_cb():
-                    self.processCookie("/shares")
-                    agent = CookieAgent(Agent(reactor), self.cookie_jar)
+                    args = ("delete", str(self.ccid), s[3], s[2])
+                    salt = self.processCookie("/shares")
+
                     dataq = []
+                    dataq.append(self.client_id.genHashArgs(args, salt))
                     dataq.append(enc_sym_key)
                     print "Uploading symkey..."
+
+                    agent = CookieAgent(Agent(reactor), self.cookie_jar)
                     body = _FileProducer(StringIO("") ,dataq)
                     headers = http_headers.Headers()
                     d = agent.request(

@@ -5,7 +5,7 @@ from twisted.web.server import NOT_DONE_YET
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES
 from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
+from Crypto.Hash import SHA256, HMAC
 from Crypto.Util import number
 from Crypto import Random
 
@@ -118,6 +118,15 @@ class ClientIdentity(object):
         dst_file.close()
         return (key, iv)
 
+    # Argument integrity utilities
+    # Concatenates and hashes a string list with given salt
+    def genHashArgs(self, args, salt):
+        #print "salt", salt
+        args = sorted(args)
+        args_str = "".join(args)
+        hash = HMAC.new(salt, digestmod=SHA256)
+        hash.update(str(args_str))
+        return b64encode(hash.hexdigest())
 
 # Some utilities:
 #
