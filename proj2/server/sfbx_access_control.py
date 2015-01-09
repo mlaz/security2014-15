@@ -101,7 +101,7 @@ class AccessCtrlHandler(object):
                     ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
                     request.addCookie('ticket', ticket)
                 else:
-                    print "Invalid Nonce!"
+                    #print "Invalid Nonce!"
                     if request.args['method'] == ['retister']:
                         self.storage.deletePBox(pboxid)
                         reply_dict = { 'status': {'error': "Invalid Ticket",

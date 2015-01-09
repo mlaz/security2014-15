@@ -74,47 +74,52 @@ class SessionManager(object):
         return self.authm.generateNonce(cli_key)
 
     def startSession(self, signature, nonceid, cli_key, pboxid, salt, passwd):
-        pwd = self.server.decryptData(passwd)
-        (pwd_hash, s) = self.server.genHash(pwd, salt)
+        ret = False
+        if int(nonceid) < 0:
 
-        # PAM conversation
-        def pam_conv(auth, query_list, userData):
-            resp = []
+            pwd = self.server.decryptData(passwd)
+            (pwd_hash, s) = self.server.genHash(pwd, salt)
 
-            for i in range(len(query_list)):
-                query, type = query_list[i]
-                if query == 'Original:':
+            # PAM conversation
+            def pam_conv(auth, query_list, userData):
+                resp = []
+
+                for i in range(len(query_list)):
+                    query, type = query_list[i]
+                    if query == 'Original:':
                         resp.append(('', 0))
-                elif query == 'Signature:':
+                    elif query == 'Signature:':
                         resp.append(('', 0))
-                else:
+                    else:
                         resp.append((pwd_hash, 0))
-            return resp
+                return resp
 
-        auth = PAM.pam()
-        auth.start('myservice')
-        auth.set_item(PAM.PAM_USER, str(pboxid))
-        auth.set_item(PAM.PAM_CONV, pam_conv)
-        try:
-            auth.authenticate()
-        except PAM.error, resp:
-            print 'AUTH FAIL (%s)' % resp
-        except:
-            print 'PAM module error'
-        else:
-            ret = True
+            auth = PAM.pam()
+            auth.start('myservice')
+            auth.set_item(PAM.PAM_USER, str(pboxid))
+            auth.set_item(PAM.PAM_CONV, pam_conv)
+            try:
+                auth.authenticate()
+            except PAM.error, resp:
+                print 'AUTH FAIL (%s)' % resp
+            except:
+                print 'PAM module error'
+            else:
+                ret = True
 
-        if ret == False:
-            print "Wrong Password!"
-            return False
+                if ret == True:
+                    print "Password Accepted"
 
-        print "Password Accepted!"
+            return ret
+
+
         if pboxid in self.active_sessions.keys():
             self.killSession(pboxid)
 
         if self.authm.validateNonce (signature, nonceid, pboxid):
             timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession, pboxid)
             self.active_sessions.update({pboxid : timeout})
+            print "Valid Challange"
             return True
         else:
             return False

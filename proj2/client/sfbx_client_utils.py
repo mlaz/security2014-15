@@ -61,7 +61,7 @@ class SafeBoxClient():
 
         self.ccid = ccid
         if pin is not None:
-			self.pin = pin
+            self.pin = pin
         return self.handleGetKey(startClientId_cb)
 
 # Session, Registry and Authentication related opreations
@@ -116,18 +116,33 @@ class SafeBoxClient():
             response.deliverBody(getNonce(defer, self.client_id, self.pin))
             return NOT_DONE_YET
 
-        agent = Agent(reactor)
-        body = FileBodyProducer(StringIO(self.client_id.pub_key.exportKey('PEM')))
+        
+        if self.pin != None:
+            agent = Agent(reactor)
+            body = FileBodyProducer(StringIO(self.client_id.pub_key.exportKey('PEM')))
+            headers = http_headers.Headers()
+            d = agent.request(
+                'GET',
+                'http://localhost:8000/session/?method=getnonce',
+                headers,
+                body)
+
+            d.addCallback(getNonce_cb)
+
+            return NOT_DONE_YET
+
+        agent = CookieAgent(Agent(reactor), self.cookie_jar)
+        body = FileBodyProducer(StringIO(self.client_id.encryptData(self.client_id.password)))
         headers = http_headers.Headers()
         d = agent.request(
-            'GET',
-            'http://localhost:8000/session/?method=getnonce',
+            'PUT',
+            'http://localhost:8000/session/?method=startsession&ccid='
+            + self.ccid + '&nonceid=' + str(-1),
             headers,
             body)
-
-        d.addCallback(getNonce_cb)
-
+        d.addCallback(procResponse_cb)
         return NOT_DONE_YET
+
 
     # handleRegister: Handles the registration process. Also part of the startClient operation.
     def handleRegister(self):

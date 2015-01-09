@@ -10,7 +10,7 @@ IV_KEY_SIZE_B64 = 172
 
 # The file test.mp3 was used for testing this module during development
 # it's at the files resource for this project on code.ua.pt
-
+# The use of this class should be replaced with it's enhanced version, FileProducer2
 class _FileProducer(object):
     interface.implements(iweb.IBodyProducer)
 
