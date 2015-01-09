@@ -15,8 +15,15 @@ KEY_LABEL = "CITIZEN AUTHENTICATION KEY"
 def get_certificate(label, pin):
     pkcs11 = PyKCS11.PyKCS11Lib()
     pkcs11.load(PKCS11_LIB)
-    slots = pkcs11.getSlotList()
-    session = pkcs11.openSession(slots[0])
+    try:
+        slots = pkcs11.getSlotList()
+    except:
+        return None
+
+    try:
+        session = pkcs11.openSession(slots[0])
+    except:
+        return None
 
     try:
         session.login(pin)
@@ -60,6 +67,5 @@ def sign(data, label, pin):
 
     sig = session.sign(key, data, mech)
     ret = ''.join(chr(c) for c in sig)
-    print "ORIGINAL SIGNATURE: " + ret
+    #print "ORIGINAL SIGNATURE: " + ret
     return ret
-

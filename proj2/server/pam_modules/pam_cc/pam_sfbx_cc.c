@@ -86,9 +86,9 @@ static sqlite3 * pam_sqlite3_connect(const char *db_path)
     }
   else
     {
-      D(("Opened database successfully\n"));
+      //D(("Opened database successfully\n"));
     }
-  D(("GOTDB"));
+  //D(("GOTDB"));
   return sdb;
 }
 
@@ -113,6 +113,7 @@ static int verify_signature(const char *user,
   //for signature validation
   int ret;
   char *original;
+  int ori_len;
   char *sign;
   int sig_len;
   SHA_CTX ctx;
@@ -164,11 +165,11 @@ static int verify_signature(const char *user,
       sig_len = Base64Decode(sign64, &sign);
       //D(("Decoded Signature: %s\n", sign));
 
-      Base64Decode(original64, &original);
+      ori_len = Base64Decode(original64, &original);
       //D(("Decoded Challange: %s\n", original));
 
       SHA1_Init ( &ctx );
-      SHA1_Update ( &ctx, original, strlen(original) );
+      SHA1_Update ( &ctx, original, ori_len );
       SHA1_Final ( digest, &ctx );
 
       //D(("DIGEST SZ: %d\n", sizeof(digest)));
@@ -180,11 +181,11 @@ static int verify_signature(const char *user,
         }
     }
 
-  D(("FINALIZING DB\n"));
+  //D(("FINALIZING DB\n"));
   sqlite3_finalize(stmt);
   sqlite3_close(conn);
 
-  D(("RET: %d\n", ret));
+  //D(("RET: %d\n", ret));
   return ret;
 }
 

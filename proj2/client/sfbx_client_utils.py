@@ -45,10 +45,12 @@ class SafeBoxClient():
                 if pin is None:
                     print "Please provide your Citizen Card for registration"
                     reactor.stop()
+                    return
                 else:
                     print "Registering user..."
                     return self.handleRegister()
             #pprint(self.cookie_jar.__dict__)
+            print "User: ", self.ccid," logged in."
             for cookie in self.cookie_jar:
                 #print cookie
                 #print type(cookie)
@@ -116,7 +118,6 @@ class SafeBoxClient():
             response.deliverBody(getNonce(defer, self.client_id, self.pin))
             return NOT_DONE_YET
 
-        
         if self.pin != None:
             agent = Agent(reactor)
             body = FileBodyProducer(StringIO(self.client_id.pub_key.exportKey('PEM')))
@@ -150,6 +151,7 @@ class SafeBoxClient():
             if success == False:
                 print "ERROR: Couldn't register user."
                 reactor.stop()
+                return
 
             #pprint(self.cookie_jar.__dict__)
             for cookie in self.cookie_jar:
@@ -184,13 +186,12 @@ class SafeBoxClient():
             if subca is None:
                 print "ERROR! Check the pin"
                 reactor.stop()
-			#print "cert len: ", len(self.client_id.encryptData(cert.as_pem()))
-			#print "sub ca len: ", len(self.client_id.encryptData(subca.as_pem()))
+
             enc_cert = b64encode(cert.as_pem())
-            print "cert len: ", len(enc_cert)
+            #print "cert len: ", len(enc_cert)
             dataq.append(enc_cert)
             enc_subca = b64encode(subca.as_pem())
-            print "sub ca len: ", len(enc_subca)
+            #print "sub ca len: ", len(enc_subca)
             dataq.append(enc_subca)
             dataq.append(self.client_id.pub_key.exportKey('PEM'))
             ext_key = self.client_id.pub_key.exportKey('PEM')
@@ -199,8 +200,8 @@ class SafeBoxClient():
 				reactor.stop()
             signed_ext_key = cc.sign(ext_key, cc.KEY_LABEL, self.pin)
             enc_sek = b64encode(signed_ext_key)
-            print "encoded ext key: ", enc_sek
-            print "len encoded: ", len(enc_sek)
+            #print "encoded ext key: ", enc_sek
+            #print "len encoded: ", len(enc_sek)
             dataq.append(enc_sek)
             body = FileProducer2(dataq)
             headers = http_headers.Headers()

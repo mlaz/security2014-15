@@ -51,7 +51,7 @@ class AccessCtrlHandler(object):
                                       'message': "No key on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
 
-        print key_txt
+        #print key_txt
         cli_key = RSA.importKey(key_txt)
         if not cli_key.can_encrypt():
             reply_dict = { 'status': {'error': "Invalid Request",
@@ -93,10 +93,10 @@ class AccessCtrlHandler(object):
                 pubkey = data[0][1]
                 salt = self.server.decryptData(data[0][2]) #TODO: STORE THIS ENCRYPTED
                 #print pubkey
-                print "StartSession salt:" , salt
+                #print "StartSession salt:" , salt
                 #print "encripted nonce: ", nonce
                 if self.session_manager.startSession(nonce, nonceid, pubkey, pboxid, salt, passwd):
-                    print "Valid Nonce!"
+                    #print "Valid Nonce!"
                     reply_dict = { 'status': "OK" }
                     ticket = self.ticket_manager.generateTicket(pboxid, pubkey)
                     request.addCookie('ticket', ticket)
@@ -122,7 +122,7 @@ class AccessCtrlHandler(object):
     def handleValidation(self, request, method):
         #print "TICKET_FROM_COOKIE:", request.getCookie('ticket')
         ticket = request.getCookie('ticket')
-        print str(ticket)
+        #print str(ticket)
         if not ticket:
             reply_dict = { 'status': {'error': "Invalid Request",
                         'message': "No ticket on request body."} }
@@ -136,10 +136,11 @@ class AccessCtrlHandler(object):
             else:
                 pboxid = data[0][0]
                 pubkey = data[0][1]
-                print pubkey
+                #print pubkey
 
                 if self.ticket_manager.validateTicket(ticket, pboxid, pubkey):
                     print "Valid Ticket!"
+                    self.session_manager.refreshSession(int(pboxid))
                     d = method(request, pboxid, pubkey)
                     return NOT_DONE_YET
 

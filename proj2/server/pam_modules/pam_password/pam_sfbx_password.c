@@ -24,12 +24,12 @@ static char password_prompt[] = "Password:";
 
 static sqlite3 * pam_sqlite3_connect(const char *db_path)
 {
-  D(("CONNECT\n"));
+  //D(("CONNECT\n"));
   const char *errtext = NULL;
   sqlite3 *db = NULL;
   int rc;
 
-  D(("DBPATH: %s", db_path));
+  //D(("DBPATH: %s", db_path));
   rc = sqlite3_open(db_path, &db);
   if( rc != SQLITE_OK)
     {
@@ -38,9 +38,9 @@ static sqlite3 * pam_sqlite3_connect(const char *db_path)
     }
   else
     {
-      D(("Opened database successfully\n"));
+      //D(("Opened database successfully\n"));
     }
-  D(("GOTDB"));
+  //D(("GOTDB"));
   return db;
 }
 
@@ -57,12 +57,12 @@ static int verify_password(const char *user,
   char *query = "SELECT Password FROM PBox WHERE PBox.PBoxId == ?";
 
 
-  D(("VERIFY\n"));
+  //D(("VERIFY\n"));
   if(!(conn = pam_sqlite3_connect(db_path)))
     return PAM_AUTH_ERR;
 
-  D(("PREPARING QUERY\n"));
-  D(("USER = %s\n", user));
+  //D(("PREPARING QUERY\n"));
+  //D(("USER = %s\n", user));
   res = sqlite3_prepare_v2(conn, query, strlen(query)+1, &stmt, &tail);
   if (res != SQLITE_OK)
     {
@@ -75,7 +75,7 @@ static int verify_password(const char *user,
     return  PAM_AUTH_ERR;
   }
 
-  D(("QUERY READY %d\n", res));
+  //D(("QUERY READY %d\n", res));
 
   rc = PAM_AUTH_ERR;
 
@@ -86,7 +86,7 @@ static int verify_password(const char *user,
   else
     {
       const char *stored_pw = (const char *) sqlite3_column_text(stmt, 0);
-      D(("STORED %s\n", stored_pw));
+      //D(("STORED %s\n", stored_pw));
       if(strcmp(passwd, stored_pw) == 0)
         {
           D(("SUCCESS\n"));
@@ -94,11 +94,11 @@ static int verify_password(const char *user,
         }
     }
 
-  D(("FINALIZING\n"));
+  //D(("FINALIZING\n"));
   sqlite3_finalize(stmt);
   sqlite3_close(conn);
 
-  D(("RC: %d\n", rc));
+  //D(("RC: %d\n", rc));
   return rc;
 }
 
@@ -155,7 +155,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
   if (pam_err != PAM_SUCCESS)
     return (PAM_AUTH_ERR);
 
-  D(("Got pass: %s", password));
+  //D(("Got pass: %s", password));
   /* compare passwords */
   if((pam_err = verify_password(user, password, argv[0])) != PAM_SUCCESS)
     {

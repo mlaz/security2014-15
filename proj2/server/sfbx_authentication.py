@@ -6,6 +6,7 @@ from Crypto.PublicKey import RSA
 
 from sfbx_server_cryptography import ServerIdentity
 
+from pprint import pprint
 from base64 import *
 import PAM
 
@@ -74,6 +75,9 @@ class SessionManager(object):
         return self.authm.generateNonce(cli_key)
 
     def startSession(self, signature, nonceid, cli_key, pboxid, salt, passwd):
+        if pboxid in self.active_sessions.keys():
+            self.killSession(pboxid)
+
         ret = False
         if int(nonceid) < 0:
 
@@ -108,13 +112,11 @@ class SessionManager(object):
                 ret = True
 
                 if ret == True:
+                    timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession, pboxid)
+                    self.active_sessions.update({pboxid : timeout})
                     print "Password Accepted"
 
             return ret
-
-
-        if pboxid in self.active_sessions.keys():
-            self.killSession(pboxid)
 
         if self.authm.validateNonce (signature, nonceid, pboxid):
             timeout = reactor.callLater(NONCE_TIMEOUT * 60, self.killSession, pboxid)
@@ -138,6 +140,7 @@ class SessionManager(object):
             print "(SessionManager:KillSession) Session not found for pboxid: ", pboxid
 
     def refreshSession(self, pboxid):
+        #pprint(self.active_sessions.keys())
         if pboxid in self.active_sessions.keys():
             if not self.active_sessions[pboxid].called:
                 self.active_sessions[pboxid].cancel()
@@ -184,6 +187,7 @@ class AuthManager(object):
             original = self.active_nonces[nonceid]['nonce']
             del self.active_nonces[nonceid]
         else:
+            print "Couldn't find Nonce!"
             return False
 
         signature = self.server.decryptData(signature)

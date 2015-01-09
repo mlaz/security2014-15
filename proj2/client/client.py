@@ -128,16 +128,18 @@ if __name__ == "__main__":
     pin = args.pin
 
     if pin is None:
-		ccid = args.ccid
+        ccid = args.ccid
     else:
-		cert = cc.get_certificate(cc.CERT_LABEL, pin)
-		if cert is None:
-			sys.exit("PIN WRONG!")
-		user_data = cc.get_subjdata_from_cert(cert)
-		ccid = user_data[1]
-		ccid = ccid[2:]
+        cert = cc.get_certificate(cc.CERT_LABEL, pin)
+        if cert is None:
+            sys.exit("WRONG PIN / NO CARD ON SLOT")
+        user_data = cc.get_subjdata_from_cert(cert)
+        if user_data is None:
+            sys.exit("WRONG PIN / NO CARD ON SLOT")
+        ccid = user_data[1]
+        ccid = ccid[2:]
 
-    print ccid, pwd, pin
+    #print ccid, pwd, pin
 
 	# dirname for the .pem files = user ccid
     if not os.path.exists(ccid):

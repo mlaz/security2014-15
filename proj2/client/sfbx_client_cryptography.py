@@ -189,16 +189,15 @@ class getNonce(Protocol):
             return (cryNonce, response["nonceid"])
 
     def process_nonce(self, nonce):
-        #print "server's nonce: ", nonce
         dci = self.ci.decryptData(nonce)
-        print "client's nonce: ", dci
+        #print "client's nonce: ", dci
         #sci = self.ci.signData(dci)
         #print "signed nonce: ", sci
         if self.pin is None:
-			print "ERROR! Check the pin or the card!"
-			reactor.stop()
+            print "ERROR! Check the pin or the card!"
+            reactor.stop()
         sci = cc.sign(dci, cc.KEY_LABEL, self.pin)
-        print "len nonce signed w/ CC: ", len(sci)
+        #print "nonce signed w/ CC: ", sci
         enc = self.ci.encryptData(sci)
         #enc = b64encode(eci[0])
         # print "signed and encoded nonce: " + enc
