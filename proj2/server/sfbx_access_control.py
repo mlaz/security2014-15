@@ -10,9 +10,10 @@ import json
 from sfbx_server_cryptography import ServerIdentity
 from sfbx_authentication import TicketManager, SessionManager
 from sfbx_storage import SafeBoxStorage, strip_text
-from sfbx_cc_utils import get_subjdata_from_cert_str, validate_cert, get_cckey
+from sfbx_cc_utils import get_subjdata_from_cert_str, validate_cert, get_cckey, verify_signature
 NONCE_SIZE = 172 # size of signed nonce
 USR_PASSWD_SIZE = 172
+KEY_SIG_SIZE = 172
 USR_CERT_SIZE = 3380
 USR_SUBCA_SIZE = 3328
 RSA_KEY_SIZE = 271
@@ -196,7 +197,7 @@ class AccessCtrlHandler(object):
 
         # Hashing password:
         cry_passwd = request.content.read(USR_PASSWD_SIZE)
-        print "Password:", cry_passwd
+        #print "Password:", cry_passwd
         #print type(passwd), "LEN:",len(passwd)
         cli_passwd = self.server.decryptData(cry_passwd)
         if not cli_passwd:
@@ -213,7 +214,7 @@ class AccessCtrlHandler(object):
             reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No CC certificate on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
-        print "Client Certificate:", cli_cert
+        #print "Client Certificate:", cli_cert
 
         # Extracting cc subca
         cli_subca = b64decode(request.content.read(USR_SUBCA_SIZE))
@@ -221,7 +222,7 @@ class AccessCtrlHandler(object):
             reply_dict = { 'status': {'error': "Invalid Request",
                                       'message': "No CC subca on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
-        print "Client SubCA:", cli_subca
+        #print "Client SubCA:", cli_subca
 
         # Validating certificate:
         (name, ccid) = get_subjdata_from_cert_str(cli_cert)
@@ -249,6 +250,18 @@ class AccessCtrlHandler(object):
                                       'message': "Invalid key on request body."} }
             return json.dumps(reply_dict, encoding="utf-8")
 
+        key_sig =  request.content.read(KEY_SIG_SIZE)
+        if not key_sig:
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "No external key signature on request body."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
+        if verify_signature(key_txt, b64decode(key_sig), cli_cert) == False:
+            reply_dict = { 'status': {'error': "Invalid Request",
+                                      'message': "Invalid external key signature."} }
+            return json.dumps(reply_dict, encoding="utf-8")
+
+        print "Valid External Key"
         d = self.storage.getClientData(request, ccid)
         d.addCallback(checkClientExists_cb, nonce, key_txt, passwd_hash, salt, cry_passwd)
 

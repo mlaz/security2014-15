@@ -15,7 +15,7 @@ cc_cert1 = "certificates/Cartao de Cidadao 001.cer"
 cc_cert2 = "certificates/Cartao de Cidadao 002.cer"
 
 
-
+# Extracts subject's commonName and serialNumber from certificate 
 def get_subjdata_from_cert_str(cert_str):
     cert = X509.load_cert_string(cert_str)
     subj = cert.get_subject()
@@ -25,6 +25,7 @@ def get_subjdata_from_cert_str(cert_str):
     serial_number = sn_entry[0].get_data().as_text(flags=ASN1_UTF8_FLGS)
     return (common_name, serial_number[2:])
 
+# Validates Authentication Key Certificates using given SUBCA
 def validate_cert(cert_str, subca_str):
     cert = X509.load_cert_string(cert_str)
     sub_ca = X509.load_cert_string(subca_str)
@@ -51,12 +52,14 @@ def validate_cert(cert_str, subca_str):
 
     return False
 
+# Extracts a PEM formatted rsa public key from Ceritficate
 def get_cckey(cert_str):
     cert = X509.load_cert_string(cert_str)
     der = cert.get_pubkey().as_der()
     rsakey = RSA.importKey(der)
     return rsakey.exportKey(format='PEM')
 
+# verifies CC signatures
 def verify_signature(original, signed, cert_str):
     cert = X509.load_cert_string(cert_str)
     pkey = cert.get_pubkey()
